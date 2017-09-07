@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import logging
+import six
 import threading
 import time
 
@@ -67,7 +68,7 @@ def get_one_by_operation_name(spans, name):
 def get_tags_count(span, prefix):
     '''Returns the tag count with the given prefix from a Span'''
     test_keys = set()
-    for key in span.tags.iterkeys():
+    for key in six.iterkeys(span.tags):
         if key.startswith(prefix):
             test_keys.add(key)
 

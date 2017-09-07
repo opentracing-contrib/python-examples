@@ -30,10 +30,10 @@ class TestThreads(unittest.TestCase):
 
         spans = self.tracer.finished_spans
         self.assertEquals(len(spans), 4)
-        self.assertEquals(map(lambda x: x.operation_name, spans),
+        self.assertEquals([x.operation_name for x in spans],
                           ['task', 'task', 'task', 'parent'])
 
-        for i in xrange(3):
+        for i in range(3):
             self.assertEquals(spans[i].context.trace_id,
                               spans[-1].context.trace_id)
             self.assertEquals(spans[i].parent_id,
