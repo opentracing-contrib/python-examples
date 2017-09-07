@@ -37,7 +37,7 @@ class TestThreads(unittest.TestCase):
         t.start()
         t.join(10.0)
 
-        await_until(lambda : len(self.tracer.finished_spans) > 0, 5.0)
+        await_until(lambda: len(self.tracer.finished_spans) > 0, 5.0)
 
         spans = self.tracer.finished_spans
         self.assertEqual(len(spans), 1)
@@ -50,7 +50,7 @@ class TestThreads(unittest.TestCase):
         t.start()
         t.join(10.0)
 
-        await_until(lambda : len(self.tracer.finished_spans) > 0, 5.0)
+        await_until(lambda: len(self.tracer.finished_spans) > 0, 5.0)
 
         spans = self.tracer.finished_spans
         self.assertEqual(len(spans), 1)

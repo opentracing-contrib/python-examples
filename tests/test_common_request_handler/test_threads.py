@@ -71,14 +71,15 @@ class TestThreads(unittest.TestCase):
             self.assertEquals(span.tags.get(tags.SPAN_KIND, None),
                               tags.SPAN_KIND_RPC_CLIENT)
 
-        self.assertNotEquals(spans[0].context.trace_id, spans[1].context.trace_id)
+        self.assertNotEquals(spans[0].context.trace_id,
+                             spans[1].context.trace_id)
         self.assertIsNone(spans[0].parent_id)
         self.assertIsNone(spans[1].parent_id)
 
     def test_parent_not_picked(self):
         '''Active parent should not be picked up by child.'''
 
-        with self.tracer.start_span('parent') as span:
+        with self.tracer.start_span('parent'):
             response = self.client.send_sync('no_parent')
             self.assertEquals('no_parent::response', response)
 
@@ -95,7 +96,8 @@ class TestThreads(unittest.TestCase):
         self.assertNotEquals(parent_span.context.span_id, child_span.parent_id)
 
     def test_bad_solution_to_set_parent(self):
-        '''Solution is bad because parent is per client (we don't have better choice)'''
+        '''Solution is bad because parent is per client
+        (we don't have better choice)'''
 
         with self.tracer.start_span('parent') as span:
             client = Client(RequestHandler(self.tracer, span.context),
@@ -109,9 +111,9 @@ class TestThreads(unittest.TestCase):
         spans = self.tracer.finished_spans
         self.assertEquals(len(spans), 3)
 
-        sorted_spans = sorted(spans, key=lambda x: x.start_time)
-        parent_span = get_one_by_operation_name(sorted_spans, 'parent')
+        spans = sorted(spans, key=lambda x: x.start_time)
+        parent_span = get_one_by_operation_name(spans, 'parent')
         self.assertIsNotNone(parent_span)
 
-        self.assertEquals(parent_span.context.span_id, sorted_spans[1].parent_id)
-        self.assertEquals(parent_span.context.span_id, sorted_spans[2].parent_id)
+        self.assertEquals(parent_span.context.span_id, spans[1].parent_id)
+        self.assertEquals(parent_span.context.span_id, spans[2].parent_id)

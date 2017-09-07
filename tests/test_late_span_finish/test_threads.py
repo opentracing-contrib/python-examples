@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 from concurrent.futures import ThreadPoolExecutor
+import time
 import unittest
 
 from ..opentracing_mock import MockTracer
@@ -39,7 +40,7 @@ class TestThreads(unittest.TestCase):
     # is not tied at all to the children.
     def submit_subtasks(self, parent_span):
         def task(name, interval):
-            with self.tracer.start_span(name, child_of=parent_span) as span:
+            with self.tracer.start_span(name, child_of=parent_span):
                 time.sleep(interval)
 
         self.executor.submit(task, 'task1', 0.1)

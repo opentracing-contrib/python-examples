@@ -32,7 +32,7 @@ class TestGevent(unittest.TestCase):
 
     def test(self):
         gevent.spawn(self.entry_thread)
-        
+
         gevent.wait(timeout=5.0)
 
         spans = self.tracer.finished_spans

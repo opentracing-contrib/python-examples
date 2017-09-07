@@ -47,7 +47,9 @@ class Client(object):
             span.set_tag(tags.SPAN_KIND, tags.SPAN_KIND_RPC_CLIENT)
 
             message = {}
-            self.tracer.inject(span.context, opentracing.Format.TEXT_MAP, message)
+            self.tracer.inject(span.context,
+                               opentracing.Format.TEXT_MAP,
+                               message)
             yield self.queue.put(message)
 
         logger.info('Sent message from client')
@@ -65,7 +67,7 @@ class TestTornado(unittest.TestCase):
         self.loop.add_callback(self.server.run)
         self.loop.add_callback(client.send)
 
-        run_until(self.loop, lambda : len(self.tracer.finished_spans) >= 2)
+        run_until(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
         self.loop.start()
 
         spans = self.tracer.finished_spans

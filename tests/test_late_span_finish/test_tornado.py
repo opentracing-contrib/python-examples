@@ -22,7 +22,7 @@ class TestTornado(unittest.TestCase):
         parent_span = self.tracer.start_span('parent')
         self.submit_subtasks(parent_span)
 
-        run_until(self.loop, lambda : len(self.tracer.finished_spans) >= 2)
+        run_until(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
         self.loop.start()
 
         # Late-finish the parent Span now.
@@ -47,7 +47,7 @@ class TestTornado(unittest.TestCase):
         @gen.coroutine
         def task(name, interval):
             logger.info('Running %s' % name)
-            with self.tracer.start_span(name, child_of=parent_span) as span:
+            with self.tracer.start_span(name, child_of=parent_span):
                 yield gen.sleep(interval)
 
         self.loop.add_callback(task, 'task1', 0.1)

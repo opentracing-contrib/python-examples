@@ -19,7 +19,7 @@ class TestTornado(unittest.TestCase):
         span = self.tracer.start_span('one')
         self.submit(span)
 
-        run_until(self.loop, lambda : len(self.tracer.finished_spans) == 1)
+        run_until(self.loop, lambda: len(self.tracer.finished_spans) == 1)
         self.loop.start()
 
         spans = self.tracer.finished_spans

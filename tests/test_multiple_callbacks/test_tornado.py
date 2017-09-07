@@ -27,7 +27,7 @@ class TestTornado(unittest.TestCase):
         if span._ref_count.decr() == 0:
             span.finish()
 
-        run_until(self.loop, lambda : len(self.tracer.finished_spans) >= 4)
+        run_until(self.loop, lambda: len(self.tracer.finished_spans) >= 4)
         self.loop.start()
 
         spans = self.tracer.finished_spans
@@ -56,5 +56,5 @@ class TestTornado(unittest.TestCase):
         for i in range(3):
             parent_span._ref_count.incr()
             self.loop.add_callback(self.task,
-                                 0.1 + random.randint(200, 500) * .001,
-                                 parent_span)
+                                   0.1 + random.randint(200, 500) * .001,
+                                   parent_span)

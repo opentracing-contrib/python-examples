@@ -36,7 +36,7 @@ class TestTornado(unittest.TestCase):
     def test(self):
         self.loop.add_callback(self.entry_thread)
 
-        run_until(self.loop, lambda : len(self.tracer.finished_spans) > 0)
+        run_until(self.loop, lambda: len(self.tracer.finished_spans) > 0)
         self.loop.start()
 
         spans = self.tracer.finished_spans
@@ -48,7 +48,7 @@ class TestTornado(unittest.TestCase):
     def test_two_callbacks(self):
         self.loop.add_callback(self.entry_thread_two_callbacks)
 
-        run_until(self.loop, lambda : len(self.tracer.finished_spans) > 0)
+        run_until(self.loop, lambda: len(self.tracer.finished_spans) > 0)
         self.loop.start()
 
         spans = self.tracer.finished_spans

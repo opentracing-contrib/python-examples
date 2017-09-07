@@ -21,7 +21,7 @@ class TestThreads(unittest.TestCase):
         # Cannot shutdown the executor and wait for the callbacks
         # to be run, as in such case only the first will be executed,
         # and the rest will get canceled.
-        await_until(lambda : len(self.tracer.finished_spans) == 1, 5)
+        await_until(lambda: len(self.tracer.finished_spans) == 1, 5)
 
         spans = self.tracer.finished_spans
         self.assertEqual(len(spans), 1)

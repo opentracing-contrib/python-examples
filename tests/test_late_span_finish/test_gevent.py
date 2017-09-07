@@ -43,7 +43,7 @@ class TestGevent(unittest.TestCase):
     def submit_subtasks(self, parent_span):
         def task(name, interval):
             logger.info('Running %s' % name)
-            with self.tracer.start_span(name, child_of=parent_span) as span:
+            with self.tracer.start_span(name, child_of=parent_span):
                 gevent.sleep(interval)
 
         gevent.spawn(task, 'task1', 0.1)
