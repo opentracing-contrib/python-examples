@@ -1,13 +1,16 @@
 from __future__ import print_function
 
-from concurrent.futures import ThreadPoolExecutor
+import functools
 import time
 import unittest
+
+import gevent
 
 from opentracing.ext import tags
 
 from ..opentracing_mock import MockTracer
 from ..utils import get_logger, get_one_by_operation_name
+from ..utils_tornado import run_until
 from .request_handler import RequestHandler
 
 
@@ -15,36 +18,34 @@ logger = get_logger(__name__)
 
 
 class Client(object):
-    def __init__(self, request_handler, executor):
+    def __init__(self, request_handler):
         self.request_handler = request_handler
-        self.executor = executor
 
     def send_task(self, message):
-        time.sleep(0.1)
+        gevent.sleep(0.1)
         request_context = {}
 
         def before_handler():
-            time.sleep(0.1)
+            gevent.sleep(0.1)
             self.request_handler.before_request(message, request_context)
 
         def after_handler():
-            time.sleep(0.1)
+            gevent.sleep(0.1)
             self.request_handler.after_request(message, request_context)
 
-        self.executor.submit(before_handler).result()
-        self.executor.submit(after_handler).result()
+        gevent.spawn(before_handler).join()
+        gevent.spawn(after_handler).join()
 
         return '%s::response' % message
 
     def send(self, message):
-        return self.executor.submit(self.send_task, message)
+        return gevent.spawn(self.send_task, message)
 
     def send_sync(self, message, timeout=5.0):
-        f = self.executor.submit(self.send_task, message)
-        return f.result(timeout=timeout)
+        return gevent.spawn(self.send_task, message).get(timeout=timeout)
 
 
-class TestThreads(unittest.TestCase):
+class TestGevent(unittest.TestCase):
     '''
     There is only one instance of 'RequestHandler' per 'Client'. Methods of
     'RequestHandler' are executed concurrently in different threads which are
@@ -54,15 +55,16 @@ class TestThreads(unittest.TestCase):
 
     def setUp(self):
         self.tracer = MockTracer()
-        self.executor = ThreadPoolExecutor(max_workers=3)
-        self.client = Client(RequestHandler(self.tracer), self.executor)
+        self.client = Client(RequestHandler(self.tracer))
 
     def test_two_callbacks(self):
-        response_future1 = self.client.send('message1')
-        response_future2 = self.client.send('message2')
+        response_greenlet1 = gevent.spawn(self.client.send_task, 'message1')
+        response_greenlet2 = gevent.spawn(self.client.send_task, 'message2')
 
-        self.assertEquals('message1::response', response_future1.result(5.0))
-        self.assertEquals('message2::response', response_future2.result(5.0))
+        gevent.joinall([response_greenlet1, response_greenlet2])
+
+        self.assertEquals('message1::response', response_greenlet1.get())
+        self.assertEquals('message2::response', response_greenlet2.get())
 
         spans = self.tracer.finished_spans
         self.assertEquals(len(spans), 2)
@@ -98,9 +100,9 @@ class TestThreads(unittest.TestCase):
         '''Solution is bad because parent is per client (we don't have better choice)'''
 
         with self.tracer.start_span('parent') as span:
-            client = Client(RequestHandler(self.tracer, span.context),
-                            self.executor)
+            client = Client(RequestHandler(self.tracer, span.context))
             response = client.send_sync('correct_parent')
+
             self.assertEquals('correct_parent::response', response)
 
         response = client.send_sync('wrong_parent')
