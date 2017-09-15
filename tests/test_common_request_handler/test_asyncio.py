@@ -3,7 +3,7 @@ from __future__ import print_function
 import functools
 import unittest
 
-from tornado import gen, ioloop
+import asyncio
 
 from opentracing.ext import tags
 
@@ -20,35 +20,31 @@ class Client(object):
         self.request_handler = request_handler
         self.loop = loop
 
-    @gen.coroutine
-    def send_task(self, message):
-        yield gen.sleep(0.1)
+    async def send_task(self, message):
+        await asyncio.sleep(0.1)
         request_context = {}
 
-        @gen.coroutine
-        def before_handler():
-            yield gen.sleep(0.1)
+        async def before_handler():
+            await asyncio.sleep(0.1)
             self.request_handler.before_request(message, request_context)
 
-        @gen.coroutine
-        def after_handler():
-            yield gen.sleep(0.1)
+        async def after_handler():
+            await asyncio.sleep(0.1)
             self.request_handler.after_request(message, request_context)
 
-        yield before_handler()
-        yield after_handler()
+        await before_handler()
+        await after_handler()
 
-        raise gen.Return('%s::response' % message)
+        return '%s::response' % message
 
     def send(self, message):
         return self.send_task(message)
 
-    def send_sync(self, message, timeout=5.0):
-        return self.loop.run_sync(functools.partial(self.send_task, message),
-                                  timeout)
+    def send_sync(self, message):
+        return self.loop.run_until_complete(self.send_task(message))
 
 
-class TestTornado(unittest.TestCase):
+class TestAsyncio(unittest.TestCase):
     '''
     There is only one instance of 'RequestHandler' per 'Client'. Methods of
     'RequestHandler' are executed concurrently in different threads which are
@@ -58,15 +54,15 @@ class TestTornado(unittest.TestCase):
 
     def setUp(self):
         self.tracer = MockTracer()
-        self.loop = ioloop.IOLoop.current()
+        self.loop = asyncio.get_event_loop()
         self.client = Client(RequestHandler(self.tracer), self.loop)
 
     def test_two_callbacks(self):
-        res_future1 = self.client.send('message1')
-        res_future2 = self.client.send('message2')
+        res_future1 = self.loop.create_task(self.client.send('message1'))
+        res_future2 = self.loop.create_task(self.client.send('message2'))
 
         stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
-        self.loop.start()
+        self.loop.run_forever()
 
         self.assertEquals('message1::response', res_future1.result())
         self.assertEquals('message2::response', res_future2.result())

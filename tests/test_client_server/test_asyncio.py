@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import unittest
 
-from tornado import gen, ioloop, queues
+import asyncio
 import opentracing
 from opentracing.ext import tags
 
@@ -22,9 +22,8 @@ class Server(object):
         self.tracer = tracer
         self.queue = queue
 
-    @gen.coroutine
-    def run(self):
-        value = yield self.queue.get()
+    async def run(self):
+        value = await self.queue.get()
         self.process(value)
 
     def process(self, message):
@@ -40,8 +39,7 @@ class Client(object):
         self.tracer = tracer
         self.queue = queue
 
-    @gen.coroutine
-    def send(self):
+    async def send(self):
         with self.tracer.start_span('send') as span:
             span.set_tag(tags.SPAN_KIND, tags.SPAN_KIND_RPC_CLIENT)
 
@@ -49,25 +47,25 @@ class Client(object):
             self.tracer.inject(span.context,
                                opentracing.Format.TEXT_MAP,
                                message)
-            yield self.queue.put(message)
+            await self.queue.put(message)
 
         logger.info('Sent message from client')
 
 
-class TestTornado(unittest.TestCase):
+class TestAsyncio(unittest.TestCase):
     def setUp(self):
         self.tracer = MockTracer()
-        self.queue = queues.Queue()
-        self.loop = ioloop.IOLoop.current()
+        self.queue = asyncio.Queue()
+        self.loop = asyncio.get_event_loop()
         self.server = Server(tracer=self.tracer, queue=self.queue)
 
     def test(self):
         client = Client(self.tracer, self.queue)
-        self.loop.add_callback(self.server.run)
-        self.loop.add_callback(client.send)
+        self.loop.create_task(self.server.run())
+        self.loop.create_task(client.send())
 
         stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
-        self.loop.start()
+        self.loop.run_forever()
 
         spans = self.tracer.finished_spans
         self.assertIsNotNone(get_one_by_tag(spans,

@@ -3,7 +3,7 @@ from __future__ import print_function
 import random
 import unittest
 
-from tornado import gen, ioloop
+import asyncio
 
 from ..opentracing_mock import MockTracer
 from ..utils import RefCount, get_logger, get_tags_count, stop_loop_when
@@ -13,12 +13,11 @@ random.seed()
 logger = get_logger(__name__)
 
 
-@gen.coroutine
-def callback(span, delay):
+async def callback(span, delay):
     logger.info('Starting callback')
 
     try:
-        yield gen.sleep(delay)
+        await asyncio.sleep(delay)
         span.set_tag('test_tag_%s' % random.randint(1, 100), 'random')
     finally:
         if span._ref_count.decr() == 0:
@@ -27,16 +26,16 @@ def callback(span, delay):
     logger.info('Finishing callback')
 
 
-class TestTornado(unittest.TestCase):
+class TestAsyncio(unittest.TestCase):
     def setUp(self):
         self.tracer = MockTracer()
-        self.loop = ioloop.IOLoop.current()
+        self.loop = asyncio.get_event_loop()
 
     def test(self):
-        self.loop.add_callback(self.entry_thread)
+        self.loop.create_task(self.entry_thread())
 
         stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) > 0)
-        self.loop.start()
+        self.loop.run_forever()
 
         spans = self.tracer.finished_spans
         self.assertEqual(len(spans), 1)
@@ -45,10 +44,10 @@ class TestTornado(unittest.TestCase):
         self.assertEquals(tags_count, 1)
 
     def test_two_callbacks(self):
-        self.loop.add_callback(self.entry_thread_two_callbacks)
+        self.loop.create_task(self.entry_thread_two_callbacks())
 
         stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) > 0)
-        self.loop.start()
+        self.loop.run_forever()
 
         spans = self.tracer.finished_spans
         self.assertEqual(len(spans), 1)
@@ -59,18 +58,16 @@ class TestTornado(unittest.TestCase):
         self.assertEquals(tags_count, 2)
 
     # Target will be completed before callback completed.
-    @gen.coroutine
-    def entry_thread(self):
+    async def entry_thread(self):
         span = self.tracer.start_span('parent')
         span._ref_count = RefCount(1)
 
         # Callback is finished at a late time and we are not
         # able to check status of the callback.
-        self.loop.add_callback(callback, span, 0.5)
+        self.loop.create_task(callback(span, 0.5))
 
     # Target will be completed before callback completed.
-    @gen.coroutine
-    def entry_thread_two_callbacks(self):
+    async def entry_thread_two_callbacks(self):
         span = self.tracer.start_span('parent')
         span._ref_count = RefCount(2)
 
@@ -78,4 +75,4 @@ class TestTornado(unittest.TestCase):
         # able to check status of the callback.
         for i in range(2):
             interval = 0.1 + random.randint(0, 500) * 0.001
-            self.loop.add_callback(callback, span, interval)
+            self.loop.create_task(callback(span, interval))

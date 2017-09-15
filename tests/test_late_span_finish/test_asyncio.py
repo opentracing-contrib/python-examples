@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import unittest
 
-from tornado import gen, ioloop
+import asyncio
 
 from ..opentracing_mock import MockTracer
 from ..utils import get_logger, stop_loop_when
@@ -11,10 +11,10 @@ from ..utils import get_logger, stop_loop_when
 logger = get_logger(__name__)
 
 
-class TestTornado(unittest.TestCase):
+class TestAsyncio(unittest.TestCase):
     def setUp(self):
         self.tracer = MockTracer()
-        self.loop = ioloop.IOLoop.current()
+        self.loop = asyncio.get_event_loop()
 
     def test_main(self):
         # Create a Span and use it as parent of a pair of subtasks.
@@ -22,7 +22,7 @@ class TestTornado(unittest.TestCase):
         self.submit_subtasks(parent_span)
 
         stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
-        self.loop.start()
+        self.loop.run_forever()
 
         # Late-finish the parent Span now.
         parent_span.finish()
@@ -43,11 +43,10 @@ class TestTornado(unittest.TestCase):
     # Fire away a few subtasks, passing a parent Span whose lifetime
     # is not tied at all to the children.
     def submit_subtasks(self, parent_span):
-        @gen.coroutine
-        def task(name, interval):
+        async def task(name, interval):
             logger.info('Running %s' % name)
             with self.tracer.start_span(name, child_of=parent_span):
-                yield gen.sleep(interval)
+                await asyncio.sleep(interval)
 
-        self.loop.add_callback(task, 'task1', 0.1)
-        self.loop.add_callback(task, 'task2', 0.3)
+        self.loop.create_task(task('task1', 0.1))
+        self.loop.create_task(task('task2', 0.3))

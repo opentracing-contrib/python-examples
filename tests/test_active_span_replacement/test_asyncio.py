@@ -2,16 +2,16 @@ from __future__ import print_function
 
 import unittest
 
-from tornado import gen, ioloop
+import asyncio
 
 from ..opentracing_mock import MockTracer
 from ..utils import stop_loop_when
 
 
-class TestTornado(unittest.TestCase):
+class TestAsyncio(unittest.TestCase):
     def setUp(self):
         self.tracer = MockTracer()
-        self.loop = ioloop.IOLoop.current()
+        self.loop = asyncio.get_event_loop()
 
     def test_main(self):
         # Start an isolated task and query for its result -and finish it-
@@ -20,7 +20,7 @@ class TestTornado(unittest.TestCase):
         self.submit_another_task(span)
 
         stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 3)
-        self.loop.start()
+        self.loop.run_forever()
 
         spans = self.tracer.finished_spans
         self.assertEqual(len(spans), 3)
@@ -39,19 +39,18 @@ class TestTornado(unittest.TestCase):
                             spans[1].context.trace_id)
         self.assertEqual(spans[0].parent_id, None)
 
-    @gen.coroutine
-    def task(self, span):
+    async def task(self, span):
         # Create a new Span for this task
         with self.tracer.start_span('task') as task_span:
-            yield gen.sleep(0.01)
+            await asyncio.sleep(0.01)
 
             with span:
                 # Simulate work strictly related to the initial Span
-                yield gen.sleep(0.2)
+                await asyncio.sleep(0.2)
 
             # Use the task span as parent of a new subtask
             with self.tracer.start_span('subtask', child_of=task_span):
-                yield gen.sleep(0.3)
+                await asyncio.sleep(0.3)
 
     def submit_another_task(self, span):
-        self.loop.add_callback(self.task, span)
+        self.loop.create_task(self.task(span))
