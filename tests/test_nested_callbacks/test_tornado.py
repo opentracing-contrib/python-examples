@@ -5,7 +5,7 @@ import unittest
 from tornado import gen, ioloop
 
 from ..opentracing_mock import MockTracer
-from ..utils_tornado import run_until
+from ..utils import stop_loop_when
 
 
 class TestTornado(unittest.TestCase):
@@ -19,7 +19,7 @@ class TestTornado(unittest.TestCase):
         span = self.tracer.start_span('one')
         self.submit(span)
 
-        run_until(self.loop, lambda: len(self.tracer.finished_spans) == 1)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) == 1)
         self.loop.start()
 
         spans = self.tracer.finished_spans

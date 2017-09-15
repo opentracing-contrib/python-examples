@@ -6,8 +6,7 @@ import unittest
 import asyncio
 
 from ..opentracing_mock import MockTracer
-from ..utils import RefCount, get_logger, get_tags_count
-from ..utils_tornado import run_until
+from ..utils import RefCount, get_logger, get_tags_count, stop_loop_when
 
 
 random.seed()
@@ -35,7 +34,7 @@ class TestAsyncio(unittest.TestCase):
     def test(self):
         self.loop.create_task(self.entry_thread())
 
-        run_until(self.loop, lambda: len(self.tracer.finished_spans) > 0)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) > 0)
         self.loop.run_forever()
 
         spans = self.tracer.finished_spans
@@ -47,7 +46,7 @@ class TestAsyncio(unittest.TestCase):
     def test_two_callbacks(self):
         self.loop.create_task(self.entry_thread_two_callbacks())
 
-        run_until(self.loop, lambda: len(self.tracer.finished_spans) > 0)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) > 0)
         self.loop.run_forever()
 
         spans = self.tracer.finished_spans

@@ -6,8 +6,7 @@ import unittest
 from tornado import gen, ioloop
 
 from ..opentracing_mock import MockTracer
-from ..utils import RefCount, get_logger, get_tags_count
-from ..utils_tornado import run_until
+from ..utils import RefCount, get_logger, get_tags_count, stop_loop_when
 
 
 random.seed()
@@ -36,7 +35,7 @@ class TestTornado(unittest.TestCase):
     def test(self):
         self.loop.add_callback(self.entry_thread)
 
-        run_until(self.loop, lambda: len(self.tracer.finished_spans) > 0)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) > 0)
         self.loop.start()
 
         spans = self.tracer.finished_spans
@@ -48,7 +47,7 @@ class TestTornado(unittest.TestCase):
     def test_two_callbacks(self):
         self.loop.add_callback(self.entry_thread_two_callbacks)
 
-        run_until(self.loop, lambda: len(self.tracer.finished_spans) > 0)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) > 0)
         self.loop.start()
 
         spans = self.tracer.finished_spans

@@ -6,8 +6,7 @@ import random
 from tornado import gen, ioloop
 
 from ..opentracing_mock import MockTracer
-from ..utils import RefCount, get_logger
-from ..utils_tornado import run_until
+from ..utils import RefCount, get_logger, stop_loop_when
 
 
 random.seed()
@@ -27,7 +26,7 @@ class TestTornado(unittest.TestCase):
         if span._ref_count.decr() == 0:
             span.finish()
 
-        run_until(self.loop, lambda: len(self.tracer.finished_spans) >= 4)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 4)
         self.loop.start()
 
         spans = self.tracer.finished_spans

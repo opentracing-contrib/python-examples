@@ -5,8 +5,7 @@ import unittest
 from tornado import gen, ioloop
 
 from ..opentracing_mock import MockTracer
-from ..utils import get_logger
-from ..utils_tornado import run_until
+from ..utils import get_logger, stop_loop_when
 
 
 logger = get_logger(__name__)
@@ -22,7 +21,7 @@ class TestTornado(unittest.TestCase):
         parent_span = self.tracer.start_span('parent')
         self.submit_subtasks(parent_span)
 
-        run_until(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
         self.loop.start()
 
         # Late-finish the parent Span now.

@@ -8,8 +8,7 @@ import asyncio
 from opentracing.ext import tags
 
 from ..opentracing_mock import MockTracer
-from ..utils import get_logger, get_one_by_operation_name
-from ..utils_tornado import run_until
+from ..utils import get_logger, get_one_by_operation_name, stop_loop_when
 from .request_handler import RequestHandler
 
 
@@ -62,7 +61,7 @@ class TestAsyncio(unittest.TestCase):
         res_future1 = self.loop.create_task(self.client.send('message1'))
         res_future2 = self.loop.create_task(self.client.send('message2'))
 
-        run_until(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
         self.loop.run_forever()
 
         self.assertEquals('message1::response', res_future1.result())

@@ -7,8 +7,7 @@ import opentracing
 from opentracing.ext import tags
 
 from ..opentracing_mock import MockTracer
-from ..utils import get_logger, get_one_by_tag
-from ..utils_tornado import run_until
+from ..utils import get_logger, get_one_by_tag, stop_loop_when
 
 
 logger = get_logger(__name__)
@@ -65,7 +64,7 @@ class TestAsyncio(unittest.TestCase):
         self.loop.create_task(self.server.run())
         self.loop.create_task(client.send())
 
-        run_until(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
         self.loop.run_forever()
 
         spans = self.tracer.finished_spans

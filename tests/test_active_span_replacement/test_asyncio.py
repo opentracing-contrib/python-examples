@@ -5,7 +5,7 @@ import unittest
 import asyncio
 
 from ..opentracing_mock import MockTracer
-from ..utils_tornado import run_until
+from ..utils import stop_loop_when
 
 
 class TestAsyncio(unittest.TestCase):
@@ -19,7 +19,7 @@ class TestAsyncio(unittest.TestCase):
         span = self.tracer.start_span('initial')
         self.submit_another_task(span)
 
-        run_until(self.loop, lambda: len(self.tracer.finished_spans) >= 3)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 3)
         self.loop.run_forever()
 
         spans = self.tracer.finished_spans

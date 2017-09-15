@@ -30,6 +30,19 @@ def await_until(func, timeout=5.0):
         time.sleep(0.01)
 
 
+def stop_loop_when(loop, cond_func, timeout=5.0):
+    '''
+    Registers a periodic callback that stops the loop when cond_func() == True.
+    Compatible with both Tornado and asyncio.
+    '''
+    if cond_func() or timeout <= 0.0:
+        loop.stop()
+        return
+
+    timeout -= 0.1
+    loop.call_later(0.1, stop_loop_when, loop, cond_func, timeout)
+
+
 def get_logger(name):
     '''Returns a logger with log level set to INFO'''
     logging.basicConfig(level=logging.INFO)
