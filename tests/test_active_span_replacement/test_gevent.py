@@ -39,15 +39,14 @@ class TestGevent(unittest.TestCase):
     def task(self, span):
         # Create a new Span for this task
         with self.tracer.start_span('task') as task_span:
-            gevent.sleep(0.01)
 
             with span:
                 # Simulate work strictly related to the initial Span
-                gevent.sleep(0.2)
+                pass
 
             # Use the task span as parent of a new subtask
             with self.tracer.start_span('subtask', child_of=task_span):
-                gevent.sleep(0.3)
+                pass
 
     def submit_another_task(self, span):
         gevent.spawn(self.task, span)

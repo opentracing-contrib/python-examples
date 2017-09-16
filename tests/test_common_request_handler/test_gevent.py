@@ -19,15 +19,12 @@ class Client(object):
         self.request_handler = request_handler
 
     def send_task(self, message):
-        gevent.sleep(0.1)
         request_context = {}
 
         def before_handler():
-            gevent.sleep(0.1)
             self.request_handler.before_request(message, request_context)
 
         def after_handler():
-            gevent.sleep(0.1)
             self.request_handler.after_request(message, request_context)
 
         gevent.spawn(before_handler).join()

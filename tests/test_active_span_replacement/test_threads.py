@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 from concurrent.futures import ThreadPoolExecutor
-import time
 import unittest
 
 from ..opentracing_mock import MockTracer
@@ -40,15 +39,14 @@ class TestThreads(unittest.TestCase):
     def task(self, span):
         # Create a new Span for this task
         with self.tracer.start_span('task') as task_span:
-            time.sleep(0.01)
 
             with span:
                 # Simulate work strictly related to the initial Span
-                time.sleep(.02)
+                pass
 
             # Use the task span as parent of a new subtask
             with self.tracer.start_span('subtask', child_of=task_span):
-                time.sleep(0.03)
+                pass
 
     def submit_another_task(self, span):
         self.executor.submit(self.task, span)

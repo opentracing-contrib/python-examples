@@ -21,15 +21,12 @@ class Client(object):
         self.loop = loop
 
     async def send_task(self, message):
-        await asyncio.sleep(0.1)
         request_context = {}
 
         async def before_handler():
-            await asyncio.sleep(0.1)
             self.request_handler.before_request(message, request_context)
 
         async def after_handler():
-            await asyncio.sleep(0.1)
             self.request_handler.after_request(message, request_context)
 
         await before_handler()

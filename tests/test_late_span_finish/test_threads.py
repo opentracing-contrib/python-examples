@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 from concurrent.futures import ThreadPoolExecutor
-import time
 import unittest
 
 from ..opentracing_mock import MockTracer
@@ -39,9 +38,9 @@ class TestThreads(unittest.TestCase):
     # Fire away a few subtasks, passing a parent Span whose lifetime
     # is not tied at all to the children.
     def submit_subtasks(self, parent_span):
-        def task(name, interval):
+        def task(name):
             with self.tracer.start_span(name, child_of=parent_span):
-                time.sleep(interval)
+                pass
 
-        self.executor.submit(task, 'task1', 0.1)
-        self.executor.submit(task, 'task2', 0.3)
+        self.executor.submit(task, 'task1')
+        self.executor.submit(task, 'task2')

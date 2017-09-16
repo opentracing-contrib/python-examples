@@ -44,10 +44,10 @@ class TestTornado(unittest.TestCase):
     # is not tied at all to the children.
     def submit_subtasks(self, parent_span):
         @gen.coroutine
-        def task(name, interval):
+        def task(name):
             logger.info('Running %s' % name)
             with self.tracer.start_span(name, child_of=parent_span):
-                yield gen.sleep(interval)
+                pass
 
-        self.loop.add_callback(task, 'task1', 0.1)
-        self.loop.add_callback(task, 'task2', 0.3)
+        self.loop.add_callback(task, 'task1')
+        self.loop.add_callback(task, 'task2')

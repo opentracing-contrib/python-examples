@@ -22,17 +22,14 @@ class Client(object):
 
     @gen.coroutine
     def send_task(self, message):
-        yield gen.sleep(0.1)
         request_context = {}
 
         @gen.coroutine
         def before_handler():
-            yield gen.sleep(0.1)
             self.request_handler.before_request(message, request_context)
 
         @gen.coroutine
         def after_handler():
-            yield gen.sleep(0.1)
             self.request_handler.after_request(message, request_context)
 
         yield before_handler()

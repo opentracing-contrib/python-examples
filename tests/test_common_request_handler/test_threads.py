@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 from concurrent.futures import ThreadPoolExecutor
-import time
 import unittest
 
 from opentracing.ext import tags
@@ -20,15 +19,12 @@ class Client(object):
         self.executor = executor
 
     def send_task(self, message):
-        time.sleep(0.1)
         request_context = {}
 
         def before_handler():
-            time.sleep(0.1)
             self.request_handler.before_request(message, request_context)
 
         def after_handler():
-            time.sleep(0.1)
             self.request_handler.after_request(message, request_context)
 
         self.executor.submit(before_handler).result()

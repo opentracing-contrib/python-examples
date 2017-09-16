@@ -43,10 +43,10 @@ class TestAsyncio(unittest.TestCase):
     # Fire away a few subtasks, passing a parent Span whose lifetime
     # is not tied at all to the children.
     def submit_subtasks(self, parent_span):
-        async def task(name, interval):
+        async def task(name):
             logger.info('Running %s' % name)
             with self.tracer.start_span(name, child_of=parent_span):
-                await asyncio.sleep(interval)
+                pass
 
-        self.loop.create_task(task('task1', 0.1))
-        self.loop.create_task(task('task2', 0.3))
+        self.loop.create_task(task('task1'))
+        self.loop.create_task(task('task2'))

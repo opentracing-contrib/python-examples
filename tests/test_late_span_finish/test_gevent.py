@@ -41,10 +41,10 @@ class TestGevent(unittest.TestCase):
     # Fire away a few subtasks, passing a parent Span whose lifetime
     # is not tied at all to the children.
     def submit_subtasks(self, parent_span):
-        def task(name, interval):
+        def task(name):
             logger.info('Running %s' % name)
             with self.tracer.start_span(name, child_of=parent_span):
-                gevent.sleep(interval)
+                pass
 
-        gevent.spawn(task, 'task1', 0.1)
-        gevent.spawn(task, 'task2', 0.3)
+        gevent.spawn(task, 'task1')
+        gevent.spawn(task, 'task2')
