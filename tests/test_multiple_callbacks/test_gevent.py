@@ -1,11 +1,11 @@
 from __future__ import print_function
 
-import unittest
 import random
 
 import gevent
 
 from ..opentracing_mock import MockTracer
+from ..testcase import OpenTracingTestCase
 from ..utils import RefCount, get_logger
 
 
@@ -13,7 +13,7 @@ random.seed()
 logger = get_logger(__name__)
 
 
-class TestGevent(unittest.TestCase):
+class TestGevent(OpenTracingTestCase):
     def setUp(self):
         self.tracer = MockTracer()
 
@@ -33,10 +33,8 @@ class TestGevent(unittest.TestCase):
                           ['task', 'task', 'task', 'parent'])
 
         for i in range(3):
-            self.assertEquals(spans[i].context.trace_id,
-                              spans[-1].context.trace_id)
-            self.assertEquals(spans[i].parent_id,
-                              spans[-1].context.span_id)
+            self.assertSameTrace(spans[i], spans[-1])
+            self.assertIsChildOf(spans[i], spans[-1])
 
     def task(self, interval, parent_span):
         logger.info('Starting task')

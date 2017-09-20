@@ -1,14 +1,14 @@
 from __future__ import print_function
 
-import unittest
 
 import asyncio
 
 from ..opentracing_mock import MockTracer
+from ..testcase import OpenTracingTestCase
 from ..utils import stop_loop_when
 
 
-class TestAsyncio(unittest.TestCase):
+class TestAsyncio(OpenTracingTestCase):
     def setUp(self):
         self.tracer = MockTracer()
         self.loop = asyncio.get_event_loop()

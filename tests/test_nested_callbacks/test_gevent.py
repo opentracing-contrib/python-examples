@@ -1,13 +1,13 @@
 from __future__ import print_function
 
-import unittest
 
 import gevent
 
 from ..opentracing_mock import MockTracer
+from ..testcase import OpenTracingTestCase
 
 
-class TestGevent(unittest.TestCase):
+class TestGevent(OpenTracingTestCase):
     def setUp(self):
         self.tracer = MockTracer()
 

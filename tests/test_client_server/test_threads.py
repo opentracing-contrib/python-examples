@@ -2,12 +2,12 @@ from __future__ import print_function
 
 from threading import Thread
 from six.moves import queue
-import unittest
 
 import opentracing
 from opentracing.ext import tags
 
 from ..opentracing_mock import MockTracer
+from ..testcase import OpenTracingTestCase
 from ..utils import await_until, get_logger, get_one_by_tag
 
 
@@ -54,7 +54,7 @@ class Client(object):
         logger.info('Sent message from client')
 
 
-class TestThreads(unittest.TestCase):
+class TestThreads(OpenTracingTestCase):
     def setUp(self):
         self.tracer = MockTracer()
         self.queue = queue.Queue()

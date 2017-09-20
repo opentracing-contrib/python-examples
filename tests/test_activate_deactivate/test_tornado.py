@@ -1,11 +1,11 @@
 from __future__ import print_function
 
 import random
-import unittest
 
 from tornado import gen, ioloop
 
 from ..opentracing_mock import MockTracer
+from ..testcase import OpenTracingTestCase
 from ..utils import RefCount, get_logger, get_tags_count, stop_loop_when
 
 
@@ -27,7 +27,7 @@ def callback(span, delay):
     logger.info('Finishing callback')
 
 
-class TestTornado(unittest.TestCase):
+class TestTornado(OpenTracingTestCase):
     def setUp(self):
         self.tracer = MockTracer()
         self.loop = ioloop.IOLoop.current()

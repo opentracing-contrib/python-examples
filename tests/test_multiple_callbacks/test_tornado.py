@@ -1,11 +1,11 @@
 from __future__ import print_function
 
-import unittest
 import random
 
 from tornado import gen, ioloop
 
 from ..opentracing_mock import MockTracer
+from ..testcase import OpenTracingTestCase
 from ..utils import RefCount, get_logger, stop_loop_when
 
 
@@ -13,7 +13,7 @@ random.seed()
 logger = get_logger(__name__)
 
 
-class TestTornado(unittest.TestCase):
+class TestTornado(OpenTracingTestCase):
     def setUp(self):
         self.tracer = MockTracer()
         self.loop = ioloop.IOLoop.current()
@@ -35,10 +35,8 @@ class TestTornado(unittest.TestCase):
                           ['task', 'task', 'task', 'parent'])
 
         for i in range(3):
-            self.assertEquals(spans[i].context.trace_id,
-                              spans[-1].context.trace_id)
-            self.assertEquals(spans[i].parent_id,
-                              spans[-1].context.span_id)
+            self.assertSameTrace(spans[i], spans[-1])
+            self.assertIsChildOf(spans[i], spans[-1])
 
     @gen.coroutine
     def task(self, interval, parent_span):

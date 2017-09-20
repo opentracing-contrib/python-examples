@@ -1,6 +1,5 @@
 from __future__ import print_function
 
-import unittest
 
 import gevent
 import gevent.queue
@@ -8,6 +7,7 @@ import opentracing
 from opentracing.ext import tags
 
 from ..opentracing_mock import MockTracer
+from ..testcase import OpenTracingTestCase
 from ..utils import get_logger, get_one_by_tag
 
 
@@ -53,7 +53,7 @@ class Client(object):
         logger.info('Sent message from client')
 
 
-class TestGevent(unittest.TestCase):
+class TestGevent(OpenTracingTestCase):
     def setUp(self):
         self.tracer = MockTracer()
         self.queue = gevent.queue.Queue()

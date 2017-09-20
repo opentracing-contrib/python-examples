@@ -1,13 +1,13 @@
 from __future__ import print_function
 
 from concurrent.futures import ThreadPoolExecutor
-import unittest
 
 from ..opentracing_mock import MockTracer
+from ..testcase import OpenTracingTestCase
 from ..utils import await_until
 
 
-class TestThreads(unittest.TestCase):
+class TestThreads(OpenTracingTestCase):
     def setUp(self):
         self.tracer = MockTracer()
         self.executor = ThreadPoolExecutor(max_workers=3)

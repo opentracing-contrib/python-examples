@@ -1,12 +1,12 @@
 from __future__ import print_function
 
 from concurrent.futures import ThreadPoolExecutor
-import unittest
 
 from ..opentracing_mock import MockTracer
+from ..testcase import OpenTracingTestCase
 
 
-class TestThreads(unittest.TestCase):
+class TestThreads(OpenTracingTestCase):
     def setUp(self):
         self.tracer = MockTracer()
         self.executor = ThreadPoolExecutor(max_workers=3)
@@ -29,10 +29,8 @@ class TestThreads(unittest.TestCase):
         self.assertEqual(spans[2].operation_name, 'parent')
 
         for i in range(2):
-            self.assertEquals(spans[i].context.trace_id,
-                              spans[-1].context.trace_id)
-            self.assertEquals(spans[i].parent_id,
-                              spans[-1].context.span_id)
+            self.assertSameTrace(spans[i], spans[-1])
+            self.assertIsChildOf(spans[i], spans[-1])
             self.assertTrue(spans[i].finish_time <= spans[-1].finish_time)
 
     # Fire away a few subtasks, passing a parent Span whose lifetime

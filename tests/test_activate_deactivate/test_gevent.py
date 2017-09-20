@@ -1,11 +1,11 @@
 from __future__ import print_function
 
 import random
-import unittest
 
 import gevent
 
 from ..opentracing_mock import MockTracer
+from ..testcase import OpenTracingTestCase
 from ..utils import RefCount, get_logger, get_tags_count
 
 
@@ -26,7 +26,7 @@ def callback(span, delay):
     logger.info('Finishing callback')
 
 
-class TestGevent(unittest.TestCase):
+class TestGevent(OpenTracingTestCase):
     def setUp(self):
         self.tracer = MockTracer()
 

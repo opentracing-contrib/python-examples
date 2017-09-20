@@ -1,14 +1,14 @@
 from __future__ import print_function
 
-import unittest
 
 from tornado import gen, ioloop
 
 from ..opentracing_mock import MockTracer
+from ..testcase import OpenTracingTestCase
 from ..utils import stop_loop_when
 
 
-class TestTornado(unittest.TestCase):
+class TestTornado(OpenTracingTestCase):
     def setUp(self):
         self.tracer = MockTracer()
         self.loop = ioloop.IOLoop.current()

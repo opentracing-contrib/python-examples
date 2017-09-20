@@ -1,11 +1,11 @@
 from __future__ import print_function
 
-import unittest
 import random
 
 import asyncio
 
 from ..opentracing_mock import MockTracer
+from ..testcase import OpenTracingTestCase
 from ..utils import RefCount, get_logger, stop_loop_when
 
 
@@ -13,7 +13,7 @@ random.seed()
 logger = get_logger(__name__)
 
 
-class TestAsyncio(unittest.TestCase):
+class TestAsyncio(OpenTracingTestCase):
     def setUp(self):
         self.tracer = MockTracer()
         self.loop = asyncio.get_event_loop()
@@ -35,10 +35,8 @@ class TestAsyncio(unittest.TestCase):
                           ['task', 'task', 'task', 'parent'])
 
         for i in range(3):
-            self.assertEquals(spans[i].context.trace_id,
-                              spans[-1].context.trace_id)
-            self.assertEquals(spans[i].parent_id,
-                              spans[-1].context.span_id)
+            self.assertSameTrace(spans[i], spans[-1])
+            self.assertIsChildOf(spans[i], spans[-1])
 
     async def task(self, interval, parent_span):
         logger.info('Starting task')

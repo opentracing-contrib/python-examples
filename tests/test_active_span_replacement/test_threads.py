@@ -1,12 +1,12 @@
 from __future__ import print_function
 
 from concurrent.futures import ThreadPoolExecutor
-import unittest
 
 from ..opentracing_mock import MockTracer
+from ..testcase import OpenTracingTestCase
 
 
-class TestThreads(unittest.TestCase):
+class TestThreads(OpenTracingTestCase):
     def setUp(self):
         self.tracer = MockTracer()
         self.executor = ThreadPoolExecutor(max_workers=3)
@@ -27,13 +27,11 @@ class TestThreads(unittest.TestCase):
 
         # task/subtask are part of the same trace,
         # and subtask is a child of task
-        self.assertEquals(spans[1].context.trace_id,
-                          spans[2].context.trace_id)
-        self.assertEquals(spans[1].parent_id, spans[2].context.span_id)
+        self.assertSameTrace(spans[1], spans[2])
+        self.assertIsChildOf(spans[1], spans[2])
 
         # initial task is not related in any way to those two tasks
-        self.assertNotEqual(spans[0].context.trace_id,
-                            spans[1].context.trace_id)
+        self.assertNotSameTrace(spans[0], spans[1])
         self.assertEqual(spans[0].parent_id, None)
 
     def task(self, span):

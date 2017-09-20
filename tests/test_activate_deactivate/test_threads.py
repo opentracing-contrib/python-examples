@@ -4,9 +4,9 @@ from concurrent.futures import ThreadPoolExecutor
 import random
 from threading import Thread
 import time
-import unittest
 
 from ..opentracing_mock import MockTracer
+from ..testcase import OpenTracingTestCase
 from ..utils import RefCount, await_until, get_logger, get_tags_count
 
 
@@ -27,7 +27,7 @@ def callback(span, delay):
     logger.info('Finishing callback')
 
 
-class TestThreads(unittest.TestCase):
+class TestThreads(OpenTracingTestCase):
     def setUp(self):
         self.tracer = MockTracer()
         self.executor = ThreadPoolExecutor(max_workers=3)

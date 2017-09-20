@@ -1,13 +1,13 @@
 from __future__ import print_function
 
 import functools
-import unittest
 
 import asyncio
 
 from opentracing.ext import tags
 
 from ..opentracing_mock import MockTracer
+from ..testcase import OpenTracingTestCase
 from ..utils import get_logger, get_one_by_operation_name, stop_loop_when
 from .request_handler import RequestHandler
 
@@ -41,7 +41,7 @@ class Client(object):
         return self.loop.run_until_complete(self.send_task(message))
 
 
-class TestAsyncio(unittest.TestCase):
+class TestAsyncio(OpenTracingTestCase):
     '''
     There is only one instance of 'RequestHandler' per 'Client'. Methods of
     'RequestHandler' are executed concurrently in different threads which are
@@ -71,8 +71,7 @@ class TestAsyncio(unittest.TestCase):
             self.assertEquals(span.tags.get(tags.SPAN_KIND, None),
                               tags.SPAN_KIND_RPC_CLIENT)
 
-        self.assertNotEquals(spans[0].context.trace_id,
-                             spans[1].context.trace_id)
+        self.assertNotSameTrace(spans[0], spans[1])
         self.assertIsNone(spans[0].parent_id)
         self.assertIsNone(spans[1].parent_id)
 
@@ -93,7 +92,7 @@ class TestAsyncio(unittest.TestCase):
         self.assertIsNotNone(parent_span)
 
         # Here check that there is no parent-child relation.
-        self.assertNotEquals(parent_span.context.span_id, child_span.parent_id)
+        self.assertIsNotChildOf(child_span, parent_span)
 
     def test_bad_solution_to_set_parent(self):
         '''Solution is bad because parent is per client
@@ -116,5 +115,5 @@ class TestAsyncio(unittest.TestCase):
         parent_span = get_one_by_operation_name(spans, 'parent')
         self.assertIsNotNone(parent_span)
 
-        self.assertEquals(parent_span.context.span_id, spans[1].parent_id)
-        self.assertEquals(parent_span.context.span_id, spans[2].parent_id)
+        self.assertIsChildOf(spans[1], parent_span)
+        self.assertIsChildOf(spans[2], parent_span)
