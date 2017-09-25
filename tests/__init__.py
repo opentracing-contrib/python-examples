@@ -7,4 +7,5 @@ TEST_NAMES = [
     'test_listener_per_request',
     'test_multiple_callbacks',
     'test_nested_callbacks',
+    'test_subtask_span_propagation',
 ]

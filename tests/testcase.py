@@ -15,3 +15,6 @@ class OpenTracingTestCase(unittest.TestCase):
 
     def assertIsNotChildOf(self, spanA, spanB):
         return self.assertNotEqual(spanA.parent_id, spanB.context.span_id)
+
+    def assertNamesEqual(self, spans, names):
+        self.assertEqual(list(map(lambda x: x.operation_name, spans)), names)
