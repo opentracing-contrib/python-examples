@@ -23,9 +23,7 @@ class TestTornado(OpenTracingTestCase):
 
         spans = self.tracer.finished_spans
         self.assertEqual(len(spans), 3)
-        self.assertEqual(spans[0].operation_name, 'initial')
-        self.assertEqual(spans[1].operation_name, 'subtask')
-        self.assertEqual(spans[2].operation_name, 'task')
+        self.assertNamesEqual(spans, ['initial', 'subtask', 'task'])
 
         # task/subtask are part of the same trace,
         # and subtask is a child of task

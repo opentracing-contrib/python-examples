@@ -31,8 +31,7 @@ class TestTornado(OpenTracingTestCase):
 
         spans = self.tracer.finished_spans
         self.assertEquals(len(spans), 4)
-        self.assertEquals([x.operation_name for x in spans],
-                          ['task', 'task', 'task', 'parent'])
+        self.assertNamesEqual(spans, ['task', 'task', 'task', 'parent'])
 
         for i in range(3):
             self.assertSameTrace(spans[i], spans[-1])
