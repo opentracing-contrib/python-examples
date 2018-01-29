@@ -1,5 +1,6 @@
 from __future__ import absolute_import, print_function
 
+from basictracer import ThreadLocalScopeManager
 from concurrent.futures import ThreadPoolExecutor
 
 from ..opentracing_mock import MockTracer
@@ -8,7 +9,7 @@ from ..testcase import OpenTracingTestCase
 
 class TestThreads(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(ThreadLocalScopeManager())
         self.executor = ThreadPoolExecutor(max_workers=3)
 
     def test_main(self):
@@ -21,12 +22,13 @@ class TestThreads(OpenTracingTestCase):
         self.assertIsChildOf(spans[0], spans[1])
 
     def parent_task(self, message):
-        with self.tracer.start_span('parent') as span:
-            f = self.executor.submit(self.child_task, message, span)
+        with self.tracer.start_active('parent') as scope:
+            f = self.executor.submit(self.child_task, message, scope.span())
             res = f.result()
 
         return res
 
     def child_task(self, message, span):
-        with self.tracer.start_span('child', child_of=span):
-            return '%s::response' % message
+        with self.tracer.scope_manager.activate(span, False):
+            with self.tracer.start_active('child'):
+                return '%s::response' % message

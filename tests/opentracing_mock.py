@@ -16,8 +16,9 @@ class MockRecorder(basictracer.SpanRecorder):
 
 
 class MockTracer(basictracer.BasicTracer):
-    def __init__(self):
-        super(MockTracer, self).__init__(MockRecorder(self))
+    def __init__(self, scope_manager=None):
+        super(MockTracer, self).__init__(MockRecorder(self),
+                                         scope_manager=scope_manager)
         self.finished_spans = []
         self.register_required_propagators()
 

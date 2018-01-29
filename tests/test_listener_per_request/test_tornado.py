@@ -6,6 +6,7 @@ from opentracing.ext import tags
 from tornado import gen, ioloop
 
 from ..opentracing_mock import MockTracer
+from ..span_propagation import TornadoScopeManager
 from ..testcase import OpenTracingTestCase
 from ..utils import get_one_by_tag
 
@@ -34,7 +35,7 @@ class Client(object):
 
 class TestThreads(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(TornadoScopeManager())
         self.loop = ioloop.IOLoop.current()
 
     def test_main(self):

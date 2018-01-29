@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+from basictracer import ThreadLocalScopeManager
 from concurrent.futures import ThreadPoolExecutor
 
 from ..opentracing_mock import MockTracer
@@ -8,11 +9,11 @@ from ..testcase import OpenTracingTestCase
 
 class TestThreads(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(ThreadLocalScopeManager())
         self.executor = ThreadPoolExecutor(max_workers=3)
 
     def test_main(self):
-        # Create a Span and use it as parent of a pair of subtasks.
+        # Create a Span and use it as (explicit) parent of a pair of subtasks.
         parent_span = self.tracer.start_span('parent')
         self.submit_subtasks(parent_span)
 

@@ -4,6 +4,7 @@ import asyncio
 from opentracing.ext import tags
 
 from ..opentracing_mock import MockTracer
+from ..span_propagation import AsyncioScopeManager
 from ..testcase import OpenTracingTestCase
 from ..utils import get_one_by_tag
 
@@ -30,7 +31,7 @@ class Client(object):
 
 class TestThreads(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(AsyncioScopeManager())
         self.loop = asyncio.get_event_loop()
 
     def test_main(self):

@@ -3,6 +3,7 @@ from __future__ import print_function
 import random
 import time
 
+from basictracer import ThreadLocalScopeManager
 from concurrent.futures import ThreadPoolExecutor
 
 from ..opentracing_mock import MockTracer
@@ -16,16 +17,18 @@ logger = get_logger(__name__)
 
 class TestThreads(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(ThreadLocalScopeManager())
         self.executor = ThreadPoolExecutor(max_workers=3)
 
     def test_main(self):
-        span = self.tracer.start_span('parent')
-
-        span._ref_count = RefCount(1)
-        self.submit_callbacks(span)
-        if span._ref_count.decr() == 0:
-            span.finish()
+        try:
+            scope = self.tracer.start_active('parent', finish_on_close=False)
+            scope.span()._ref_count = RefCount(1)
+            self.submit_callbacks(scope.span())
+        finally:
+            scope.close()
+            if scope.span()._ref_count.decr() == 0:
+                scope.span().finish()
 
         self.executor.shutdown(True)
 
@@ -41,9 +44,11 @@ class TestThreads(OpenTracingTestCase):
         logger.info('Starting task')
 
         try:
-            with self.tracer.start_span('task', child_of=parent_span):
+            scope = self.tracer.scope_manager.activate(parent_span, False)
+            with self.tracer.start_active('task'):
                 time.sleep(interval)
         finally:
+            scope.close()
             if parent_span._ref_count.decr() == 0:
                 parent_span.finish()
 

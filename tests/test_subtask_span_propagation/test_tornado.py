@@ -5,17 +5,19 @@ import functools
 from tornado import gen, ioloop
 
 from ..opentracing_mock import MockTracer
+from ..span_propagation import TracerStackContext, TornadoScopeManager
 from ..testcase import OpenTracingTestCase
 
 
 class TestTornado(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(TornadoScopeManager())
         self.loop = ioloop.IOLoop.current()
 
     def test_main(self):
         parent_task = functools.partial(self.parent_task, 'message')
-        res = self.loop.run_sync(parent_task)
+        with TracerStackContext():
+            res = self.loop.run_sync(parent_task)
         self.assertEqual(res, 'message::response')
 
         spans = self.tracer.finished_spans
@@ -25,12 +27,12 @@ class TestTornado(OpenTracingTestCase):
 
     @gen.coroutine
     def parent_task(self, message):
-        with self.tracer.start_span('parent') as span:
-            res = yield self.child_task(message, span)
+        with self.tracer.start_active('parent'):
+            res = yield self.child_task(message)
 
         raise gen.Return(res)
 
     @gen.coroutine
-    def child_task(self, message, span):
-        with self.tracer.start_span('child', child_of=span):
+    def child_task(self, message):
+        with self.tracer.start_active('child'):
             raise gen.Return('%s::response' % message)

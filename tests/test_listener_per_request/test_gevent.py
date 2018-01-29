@@ -4,6 +4,7 @@ import gevent
 from opentracing.ext import tags
 
 from ..opentracing_mock import MockTracer
+from ..span_propagation import GeventScopeManager
 from ..testcase import OpenTracingTestCase
 from ..utils import get_one_by_tag
 
@@ -29,7 +30,7 @@ class Client(object):
 
 class TestThreads(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(GeventScopeManager())
 
     def test_main(self):
         client = Client(self.tracer)

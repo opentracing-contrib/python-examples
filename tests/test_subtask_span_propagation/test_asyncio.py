@@ -5,12 +5,13 @@ import functools
 import asyncio
 
 from ..opentracing_mock import MockTracer
+from ..span_propagation import AsyncioScopeManager
 from ..testcase import OpenTracingTestCase
 
 
 class TestAsyncio(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(AsyncioScopeManager())
         self.loop = asyncio.get_event_loop()
 
     def test_main(self):
@@ -23,11 +24,12 @@ class TestAsyncio(OpenTracingTestCase):
         self.assertIsChildOf(spans[0], spans[1])
 
     async def parent_task(self, message):
-        with self.tracer.start_span('parent') as span:
-            res = await self.child_task(message, span)
+        with self.tracer.start_active('parent') as scope:
+            res = await self.child_task(message, scope.span())
 
         return res
 
     async def child_task(self, message, span):
-        with self.tracer.start_span('child', child_of=span):
-            return '%s::response' % message
+        with self.tracer.scope_manager.activate(span, False):
+            with self.tracer.start_active('child'):
+                return '%s::response' % message

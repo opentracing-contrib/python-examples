@@ -4,13 +4,14 @@ from __future__ import print_function
 import asyncio
 
 from ..opentracing_mock import MockTracer
+from ..span_propagation import AsyncioScopeManager
 from ..testcase import OpenTracingTestCase
 from ..utils import stop_loop_when
 
 
 class TestAsyncio(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(AsyncioScopeManager())
         self.loop = asyncio.get_event_loop()
 
     def test_main(self):
@@ -31,17 +32,20 @@ class TestAsyncio(OpenTracingTestCase):
 
     def submit(self, span):
         async def task1():
-            span.set_tag('key1', '1')
+            with self.tracer.scope_manager.activate(span, False):
+                span.set_tag('key1', '1')
 
-            async def task2():
-                span.set_tag('key2', '2')
+                async def task2():
+                    with self.tracer.scope_manager.activate(span, False):
+                        span.set_tag('key2', '2')
 
-                async def task3():
-                    span.set_tag('key3', '3')
-                    span.finish()
+                        async def task3():
+                            with self.tracer.scope_manager.activate(span, False):
+                                span.set_tag('key3', '3')
+                                span.finish()
 
-                self.loop.create_task(task3())
+                        self.loop.create_task(task3())
 
-            self.loop.create_task(task2())
+                self.loop.create_task(task2())
 
         self.loop.create_task(task1())

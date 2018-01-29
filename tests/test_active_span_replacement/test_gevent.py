@@ -3,12 +3,13 @@ from __future__ import print_function
 import gevent
 
 from ..opentracing_mock import MockTracer
+from ..span_propagation import GeventScopeManager
 from ..testcase import OpenTracingTestCase
 
 
 class TestGevent(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(GeventScopeManager())
 
     def test_main(self):
         # Start an isolated task and query for its result -and finish it-
@@ -33,14 +34,14 @@ class TestGevent(OpenTracingTestCase):
 
     def task(self, span):
         # Create a new Span for this task
-        with self.tracer.start_span('task') as task_span:
+        with self.tracer.start_active('task') as task_span:
 
-            with span:
+            with self.tracer.scope_manager.activate(span, True):
                 # Simulate work strictly related to the initial Span
                 pass
 
             # Use the task span as parent of a new subtask
-            with self.tracer.start_span('subtask', child_of=task_span):
+            with self.tracer.start_active('subtask'):
                 pass
 
     def submit_another_task(self, span):

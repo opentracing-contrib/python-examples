@@ -3,13 +3,14 @@ from __future__ import print_function
 from tornado import gen, ioloop
 
 from ..opentracing_mock import MockTracer
+from ..span_propagation import TornadoScopeManager, TracerStackContext
 from ..testcase import OpenTracingTestCase
 from ..utils import stop_loop_when
 
 
 class TestTornado(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(TornadoScopeManager())
         self.loop = ioloop.IOLoop.current()
 
     def test_main(self):

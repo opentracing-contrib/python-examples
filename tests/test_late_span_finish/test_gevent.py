@@ -4,7 +4,8 @@ import gevent
 
 from ..opentracing_mock import MockTracer
 from ..testcase import OpenTracingTestCase
-from ..utils import get_logger
+from ..span_propagation import GeventScopeManager
+from ..utils import get_logger, stop_loop_when
 
 
 logger = get_logger(__name__)
@@ -12,10 +13,10 @@ logger = get_logger(__name__)
 
 class TestGevent(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(GeventScopeManager())
 
     def test_main(self):
-        # Create a Span and use it as parent of a pair of subtasks.
+        # Create a Span and use it as (explicit) parent of a pair of subtasks.
         parent_span = self.tracer.start_span('parent')
         self.submit_subtasks(parent_span)
 
@@ -37,7 +38,6 @@ class TestGevent(OpenTracingTestCase):
     # is not tied at all to the children.
     def submit_subtasks(self, parent_span):
         def task(name):
-            logger.info('Running %s' % name)
             with self.tracer.start_span(name, child_of=parent_span):
                 pass
 

@@ -3,12 +3,13 @@ from __future__ import absolute_import, print_function
 import gevent
 
 from ..opentracing_mock import MockTracer
+from ..span_propagation import GeventScopeManager
 from ..testcase import OpenTracingTestCase
 
 
 class TestGevent(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(GeventScopeManager())
 
     def test_main(self):
         res = gevent.spawn(self.parent_task, 'message').get()
@@ -20,11 +21,12 @@ class TestGevent(OpenTracingTestCase):
         self.assertIsChildOf(spans[0], spans[1])
 
     def parent_task(self, message):
-        with self.tracer.start_span('parent') as span:
-            res = gevent.spawn(self.child_task, message, span).get()
+        with self.tracer.start_active('parent') as scope:
+            res = gevent.spawn(self.child_task, message, scope.span()).get()
 
         return res
 
     def child_task(self, message, span):
-        with self.tracer.start_span('child', child_of=span):
-            return '%s::response' % message
+        with self.tracer.scope_manager.activate(span, False):
+            with self.tracer.start_active('child'):
+                return '%s::response' % message

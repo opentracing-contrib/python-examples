@@ -4,12 +4,13 @@ import asyncio
 
 from ..opentracing_mock import MockTracer
 from ..testcase import OpenTracingTestCase
+from ..span_propagation import AsyncioScopeManager
 from ..utils import stop_loop_when
 
 
 class TestAsyncio(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(AsyncioScopeManager())
         self.loop = asyncio.get_event_loop()
 
     def test_main(self):
@@ -36,14 +37,14 @@ class TestAsyncio(OpenTracingTestCase):
 
     async def task(self, span):
         # Create a new Span for this task
-        with self.tracer.start_span('task') as task_span:
+        with self.tracer.start_active('task') as task_span:
 
-            with span:
+            with self.tracer.scope_manager.activate(span, True):
                 # Simulate work strictly related to the initial Span
                 pass
 
             # Use the task span as parent of a new subtask
-            with self.tracer.start_span('subtask', child_of=task_span):
+            with self.tracer.start_active('subtask'):
                 pass
 
     def submit_another_task(self, span):

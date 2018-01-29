@@ -7,6 +7,7 @@ import gevent
 from ..opentracing_mock import MockTracer
 from ..testcase import OpenTracingTestCase
 from ..utils import RefCount, get_logger, get_tags_count
+from ..scope_managers import GeventScopeManager
 
 
 random.seed()
@@ -28,7 +29,7 @@ def callback(span, delay):
 
 class TestGevent(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(GeventScopeManager())
 
     def test(self):
         gevent.spawn(self.entry_thread)
