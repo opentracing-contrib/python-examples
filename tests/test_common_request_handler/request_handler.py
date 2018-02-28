@@ -16,7 +16,11 @@ class RequestHandler(object):
     def before_request(self, request, request_context):
         logger.info('Before request %s' % request)
 
-        span = self.tracer.start_span('send', child_of=self.context)
+        # Since there will be an active Span, we need to
+        # be explicit on ignoring it.
+        span = self.tracer.start_span('send',
+                                      child_of=self.context,
+                                      ignore_active_span=True)
         span.set_tag(tags.SPAN_KIND, tags.SPAN_KIND_RPC_CLIENT)
 
         request_context['span'] = span

@@ -38,8 +38,10 @@ class TestGevent(OpenTracingTestCase):
     # is not tied at all to the children.
     def submit_subtasks(self, parent_span):
         def task(name):
-            with self.tracer.start_span(name, child_of=parent_span):
-                pass
+            with self.tracer.start_active_span(name,
+                                               True,
+                                               child_of=parent_span):
+                gevent.sleep(0.1)
 
         gevent.spawn(task, 'task1')
         gevent.spawn(task, 'task2')

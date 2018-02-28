@@ -84,7 +84,7 @@ class TestTornado(OpenTracingTestCase):
         '''Active parent should not be picked up by child.'''
 
         with TracerStackContext():
-            with self.tracer.start_active('parent'):
+            with self.tracer.start_active_span('parent', True):
                 response = self.client.send_sync('no_parent')
                 self.assertEquals('no_parent::response', response)
 
@@ -105,8 +105,8 @@ class TestTornado(OpenTracingTestCase):
         (we don't have better choice)'''
 
         with TracerStackContext():
-            with self.tracer.start_active('parent') as scope:
-                client = Client(RequestHandler(self.tracer, scope.span().context),
+            with self.tracer.start_active_span('parent', True) as scope:
+                client = Client(RequestHandler(self.tracer, scope.span.context),
                                 self.loop)
                 response = client.send_sync('correct_parent')
 

@@ -22,6 +22,7 @@ class AsyncioScopeManager(ScopeManager):
         loop = asyncio.get_event_loop()
         return asyncio.Task.current_task(loop=loop)
 
+    @property
     def active(self):
         task = self._get_current_task()
         return getattr(task, '__active', None)
@@ -31,17 +32,17 @@ class AsyncioScope(Scope):
     def __init__(self, manager, span, finish_on_close):
         super(AsyncioScope, self).__init__(manager, span)
         self._finish_on_close = finish_on_close
-        self._to_restore = manager.active()
+        self._to_restore = manager.active
 
     def close(self):
-        if self._manager.active() is not self:
+        if self._manager.active is not self:
             return
 
         task = self._manager._get_current_task()
         setattr(task, '__active', self._to_restore)
 
         if self._finish_on_close:
-            self.span().finish()
+            self.span.finish()
 
 
 class GeventScopeManager(ScopeManager):
@@ -54,6 +55,7 @@ class GeventScopeManager(ScopeManager):
 
         return scope
 
+    @property
     def active(self):
         return getattr(self._locals, 'active', None)
 
@@ -62,28 +64,22 @@ class GeventScope(Scope):
     def __init__(self, manager, span, finish_on_close):
         super(GeventScope, self).__init__(manager, span)
         self._finish_on_close = finish_on_close
-        self._to_restore = manager.active()
+        self._to_restore = manager.active
 
     def close(self):
-        if self._manager.active() is not self:
+        if self._manager.active is not self:
             return
 
         setattr(self._manager._locals, 'active', self._to_restore)
 
         if self._finish_on_close:
-            self.span().finish()
+            self.span.finish()
 
 
 class TornadoScopeManager(ScopeManager):
     def activate(self, span, finish_on_close):
-        '''
-        data = TracerStackContext.current_data()
-        if data is None:
-            raise Exception('Not under TracerStackContext')
-        '''
-        data = self._get_context_data()
-
         scope = TornadoScope(self, span, finish_on_close)
+        data = self._get_context_data()
         data['active'] = scope
 
         return scope
@@ -95,10 +91,10 @@ class TornadoScopeManager(ScopeManager):
 
         return data
 
+    @property
     def active(self):
         data = TracerStackContext.current_data()
         if data is None:
-            # should throw an exception here as well?
             return None
 
         return data.get('active', None)
@@ -108,7 +104,7 @@ class TornadoScope(Scope):
     def __init__(self, manager, span, finish_on_close):
         super(TornadoScope, self).__init__(manager, span)
         self._finish_on_close = finish_on_close
-        self._to_restore = manager.active()
+        self._to_restore = manager.active
 
     def close(self):
         data = self._manager._get_context_data()
@@ -118,7 +114,7 @@ class TornadoScope(Scope):
         data['active'] = self._to_restore
 
         if self._finish_on_close:
-            self.span().finish()
+            self.span.finish()
 
 
 from tornado.stack_context import StackContextInconsistentError, _state, wrap

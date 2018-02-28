@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import time
 from basictracer import ThreadLocalScopeManager
 from concurrent.futures import ThreadPoolExecutor
 
@@ -36,8 +37,10 @@ class TestThreads(OpenTracingTestCase):
     # is not tied at all to the children.
     def submit_subtasks(self, parent_span):
         def task(name):
-            with self.tracer.start_span(name, child_of=parent_span):
-                pass
+            with self.tracer.start_active_span(name,
+                                               True,
+                                               child_of=parent_span):
+                time.sleep(0.1)
 
         self.executor.submit(task, 'task1')
         self.executor.submit(task, 'task2')
