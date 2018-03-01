@@ -17,8 +17,9 @@ class TestTornado(OpenTracingTestCase):
     def test_main(self):
         # Start a Span and let the callback-chain
         # finish it when the task is done
-        span = self.tracer.start_manual('one')
-        self.submit(span)
+        with TracerStackContext():
+            with self.tracer.start_active_span('one', False):
+                self.submit()
 
         stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) == 1)
         self.loop.start()
@@ -30,37 +31,32 @@ class TestTornado(OpenTracingTestCase):
         for i in range(1, 4):
             self.assertEqual(spans[0].tags.get('key%s' % i, None), str(i))
 
-    def _active_span(self):
-        scope = self.tracer.scope_manager.active()
-        if scope is None:
-            return None
+    # Since TracerStackContext propagates the active Span
+    # from the first callback, we don't need to re-activate
+    # it later on anymore.
+    def submit(self):
+        span = self.tracer.scope_manager.active.span
 
-        return scope.span()
-
-    # Since TracerStackContext propagates the
-    # active Span, we don't need to activate the Span
-    # manually at all.
-    def submit(self, span):
         @gen.coroutine
         def task1():
-            self.assertEqual(span, self._active_span())
-            span.set_tag('key1', '1')
-
-            @gen.coroutine
-            def task2():
-                self.assertEqual(span, self._active_span())
-                span.set_tag('key2', '2')
+            with self.tracer.scope_manager.activate(span, False):
+                span.set_tag('key1', '1')
 
                 @gen.coroutine
-                def task3():
-                    self.assertEqual(span, self._active_span())
-                    span.set_tag('key3', '3')
-                    span.finish()
+                def task2():
+                    self.assertEqual(span,
+                                     self.tracer.scope_manager.active.span)
+                    span.set_tag('key2', '2')
 
-                yield task3()
+                    @gen.coroutine
+                    def task3():
+                        self.assertEqual(span,
+                                         self.tracer.scope_manager.active.span)
+                        span.set_tag('key3', '3')
+                        span.finish()
 
-            yield task2()
+                    yield task3()
 
-        with TracerStackContext() as ctx:
-            with self.tracer.scope_manager.activate(span, False):
-                self.loop.run_sync(task1)
+                yield task2()
+
+        self.loop.add_callback(task1)

@@ -22,13 +22,15 @@ class TestTornado(OpenTracingTestCase):
     def test_main(self):
         @gen.coroutine
         def main_task():
-            with self.tracer.start_active('parent',
-                                          finish_on_close=True) as scope:
+            with self.tracer.start_active_span('parent', True):
                 tasks = self.submit_callbacks()
                 yield tasks
 
         with TracerStackContext():
-            self.loop.run_sync(main_task)
+            self.loop.add_callback(main_task)
+
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) == 4)
+        self.loop.start()
 
         spans = self.tracer.finished_spans
         self.assertEquals(len(spans), 4)
@@ -46,11 +48,11 @@ class TestTornado(OpenTracingTestCase):
         # keeps track of it, BUT a limitation is that, yielding
         # upon multiple coroutines, we cannot mess with the context,
         # so no active span set here.
-        with self.tracer.start_span('task') as span:
+        with self.tracer.start_span('task'):
             yield gen.sleep(interval)
 
     def submit_callbacks(self):
-        parent_span = self.tracer.scope_manager.active().span()
+        parent_span = self.tracer.scope_manager.active.span
         tasks = []
         for i in range(3):
             interval = 0.1 + random.randint(200, 500) * 0.001

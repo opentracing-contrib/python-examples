@@ -16,8 +16,8 @@ class TestThreads(OpenTracingTestCase):
     def test_main(self):
         # Start a Span and let the callback-chain
         # finish it when the task is done
-        span = self.tracer.start_manual('one')
-        self.submit(span)
+        with self.tracer.start_active_span('one', False):
+            self.submit()
 
         # Cannot shutdown the executor and wait for the callbacks
         # to be run, as in such case only the first will be executed,
@@ -31,7 +31,8 @@ class TestThreads(OpenTracingTestCase):
         for i in range(1, 4):
             self.assertEqual(spans[0].tags.get('key%s' % i, None), str(i))
 
-    def submit(self, span):
+    def submit(self):
+        span = self.tracer.scope_manager.active.span
         def task1():
             with self.tracer.scope_manager.activate(span, False):
                 span.set_tag('key1', '1')

@@ -22,13 +22,12 @@ class TestAsyncio(OpenTracingTestCase):
     def test_main(self):
         # Need to run within a Task, as the scope manager depends
         # on Task.current_task()
-        async def init():
-            with self.tracer.start_active('parent',
-                                          finish_on_close=True) as scope:
+        async def main_task():
+            with self.tracer.start_active_span('parent', True):
                 tasks = self.submit_callbacks()
                 await asyncio.gather(*tasks)
 
-        self.loop.create_task(init())
+        self.loop.create_task(main_task())
 
         stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 4)
         self.loop.run_forever()
@@ -44,12 +43,12 @@ class TestAsyncio(OpenTracingTestCase):
     async def task(self, interval, parent_span):
         logger.info('Starting task')
 
-        with self.tracer.scope_manager.activate(parent_span, False) as scope:
-            with self.tracer.start_active('task'):
+        with self.tracer.scope_manager.activate(parent_span, False):
+            with self.tracer.start_active_span('task', True):
                 await asyncio.sleep(interval)
 
     def submit_callbacks(self):
-        parent_span = self.tracer.scope_manager.active().span()
+        parent_span = self.tracer.scope_manager.active.span
         tasks = []
         for i in range(3):
             interval = 0.1 + random.randint(200, 500) * 0.001

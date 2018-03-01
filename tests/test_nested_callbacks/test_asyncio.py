@@ -17,8 +17,11 @@ class TestAsyncio(OpenTracingTestCase):
     def test_main(self):
         # Start a Span and let the callback-chain
         # finish it when the task is done
-        span = self.tracer.start_span('one')
-        self.submit(span)
+        async def task():
+            with self.tracer.start_active_span('one', False):
+                self.submit()
+
+        self.loop.create_task(task())
 
         stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) == 1)
         self.loop.run_forever()
@@ -30,7 +33,9 @@ class TestAsyncio(OpenTracingTestCase):
         for i in range(1, 4):
             self.assertEqual(spans[0].tags.get('key%s' % i, None), str(i))
 
-    def submit(self, span):
+    def submit(self):
+        span = self.tracer.scope_manager.active.span
+
         async def task1():
             with self.tracer.scope_manager.activate(span, False):
                 span.set_tag('key1', '1')
@@ -40,7 +45,8 @@ class TestAsyncio(OpenTracingTestCase):
                         span.set_tag('key2', '2')
 
                         async def task3():
-                            with self.tracer.scope_manager.activate(span, False):
+                            with self.tracer.scope_manager.activate(span,
+                                                                    False):
                                 span.set_tag('key3', '3')
                                 span.finish()
 
