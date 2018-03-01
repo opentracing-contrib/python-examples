@@ -3,7 +3,7 @@ from __future__ import print_function
 from tornado import gen, ioloop
 
 from ..opentracing_mock import MockTracer
-from ..span_propagation import TornadoScopeManager
+from ..span_propagation import TornadoScopeManager, TracerStackContext
 from ..testcase import OpenTracingTestCase
 from ..utils import get_logger, stop_loop_when
 
@@ -18,8 +18,9 @@ class TestTornado(OpenTracingTestCase):
 
     def test_main(self):
         # Create a Span and use it as (explicit) parent of a pair of subtasks.
-        parent_span = self.tracer.start_span('parent')
-        self.submit_subtasks(parent_span)
+        with TracerStackContext():
+            parent_span = self.tracer.start_span('parent')
+            self.submit_subtasks(parent_span)
 
         stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
         self.loop.start()
@@ -42,8 +43,10 @@ class TestTornado(OpenTracingTestCase):
         @gen.coroutine
         def task(name):
             logger.info('Running %s' % name)
-            with self.tracer.start_span(name, child_of=parent_span):
-                pass
+            with self.tracer.start_active_span(name,
+                                               True,
+                                               child_of=parent_span):
+                gen.sleep(0.1)
 
         self.loop.add_callback(task, 'task1')
         self.loop.add_callback(task, 'task2')

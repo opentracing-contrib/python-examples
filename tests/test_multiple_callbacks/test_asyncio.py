@@ -22,17 +22,12 @@ class TestAsyncio(OpenTracingTestCase):
     def test_main(self):
         # Need to run within a Task, as the scope manager depends
         # on Task.current_task()
-        async def init():
-            try:
-                scope = self.tracer.start_active('parent', finish_on_close=False)
-                scope.span()._ref_count = RefCount(1)
-                self.submit_callbacks(scope.span())
-            finally:
-                scope.close()
-                if scope.span()._ref_count.decr() == 0:
-                    scope.span().finish()
+        async def main_task():
+            with self.tracer.start_active_span('parent', True):
+                tasks = self.submit_callbacks()
+                await asyncio.gather(*tasks)
 
-        self.loop.create_task(init())
+        self.loop.create_task(main_task())
 
         stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 4)
         self.loop.run_forever()
@@ -48,17 +43,16 @@ class TestAsyncio(OpenTracingTestCase):
     async def task(self, interval, parent_span):
         logger.info('Starting task')
 
-        try:
-            scope = self.tracer.scope_manager.activate(parent_span, False)
-            with self.tracer.start_active('task'):
+        with self.tracer.scope_manager.activate(parent_span, False):
+            with self.tracer.start_active_span('task', True):
                 await asyncio.sleep(interval)
-        finally:
-            scope.close()
-            if parent_span._ref_count.decr() == 0:
-                parent_span.finish()
 
-    def submit_callbacks(self, parent_span):
+    def submit_callbacks(self):
+        parent_span = self.tracer.scope_manager.active.span
+        tasks = []
         for i in range(3):
-            parent_span._ref_count.incr()
             interval = 0.1 + random.randint(200, 500) * 0.001
-            self.loop.create_task(self.task(interval, parent_span))
+            t = self.loop.create_task(self.task(interval, parent_span))
+            tasks.append(t)
+
+        return tasks

@@ -16,24 +16,20 @@ logger = get_logger(__name__)
 
 class TestTornado(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(TornadoScopeManager())
         self.loop = ioloop.IOLoop.current()
 
     def test_main(self):
-        def init():
-            try:
-                scope = self.tracer.start_active('parent', finish_on_close=False)
-                scope.span()._ref_count = RefCount(1)
-                self.submit_callbacks(scope.span())
-            finally:
-                scope.close()
-                if scope.span()._ref_count.decr() == 0:
-                    scope.span().finish()
+        @gen.coroutine
+        def main_task():
+            with self.tracer.start_active_span('parent', True):
+                tasks = self.submit_callbacks()
+                yield tasks
 
         with TracerStackContext():
-            self.loop.add_callback(init)
+            self.loop.add_callback(main_task)
 
-        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 4)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) == 4)
         self.loop.start()
 
         spans = self.tracer.finished_spans
@@ -48,18 +44,19 @@ class TestTornado(OpenTracingTestCase):
     def task(self, interval, parent_span):
         logger.info('Starting task')
 
-        # No need to reactivate the parent_span, as TracerStackContext
-        # keeps track of it.
-        try:
-            with self.tracer.start_active('task'):
-                yield gen.sleep(interval)
-        finally:
-            if parent_span._ref_count.decr() == 0:
-                parent_span.finish()
+        # NOTE: No need to reactivate the parent_span, as TracerStackContext
+        # keeps track of it, BUT a limitation is that, yielding
+        # upon multiple coroutines, we cannot mess with the context,
+        # so no active span set here.
+        with self.tracer.start_span('task'):
+            yield gen.sleep(interval)
 
-    def submit_callbacks(self, parent_span):
+    def submit_callbacks(self):
+        parent_span = self.tracer.scope_manager.active.span
+        tasks = []
         for i in range(3):
-            parent_span._ref_count.incr()
-            self.loop.add_callback(self.task,
-                                   0.1 + random.randint(200, 500) * .001,
-                                   parent_span)
+            interval = 0.1 + random.randint(200, 500) * 0.001
+            t = self.task(interval, parent_span)
+            tasks.append(t)
+
+        return tasks

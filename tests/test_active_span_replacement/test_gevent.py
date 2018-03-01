@@ -34,14 +34,14 @@ class TestGevent(OpenTracingTestCase):
 
     def task(self, span):
         # Create a new Span for this task
-        with self.tracer.start_active('task') as task_span:
+        with self.tracer.start_active_span('task', True) as task_span:
 
             with self.tracer.scope_manager.activate(span, True):
                 # Simulate work strictly related to the initial Span
                 pass
 
             # Use the task span as parent of a new subtask
-            with self.tracer.start_active('subtask'):
+            with self.tracer.start_active_span('subtask', True):
                 pass
 
     def submit_another_task(self, span):

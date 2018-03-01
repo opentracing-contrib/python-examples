@@ -7,6 +7,7 @@ import opentracing
 from opentracing.ext import tags
 
 from ..opentracing_mock import MockTracer
+from ..span_propagation import GeventScopeManager
 from ..testcase import OpenTracingTestCase
 from ..utils import get_logger, get_one_by_tag
 
@@ -31,8 +32,10 @@ class Server(object):
         logger.info('Processing message in server')
 
         ctx = self.tracer.extract(opentracing.Format.TEXT_MAP, message)
-        with self.tracer.start_span('receive', child_of=ctx) as span:
-            span.set_tag(tags.SPAN_KIND, tags.SPAN_KIND_RPC_SERVER)
+        with self.tracer.start_active_span('receive',
+                                           True,
+                                           child_of=ctx) as scope:
+            scope.span.set_tag(tags.SPAN_KIND, tags.SPAN_KIND_RPC_SERVER)
 
 
 class Client(object):
@@ -41,11 +44,11 @@ class Client(object):
         self.queue = queue
 
     def send(self):
-        with self.tracer.start_span('send') as span:
-            span.set_tag(tags.SPAN_KIND, tags.SPAN_KIND_RPC_CLIENT)
+        with self.tracer.start_active_span('send', True) as scope:
+            scope.span.set_tag(tags.SPAN_KIND, tags.SPAN_KIND_RPC_CLIENT)
 
             message = {}
-            self.tracer.inject(span.context,
+            self.tracer.inject(scope.span.context,
                                opentracing.Format.TEXT_MAP,
                                message)
             self.queue.put(message)
@@ -55,7 +58,7 @@ class Client(object):
 
 class TestGevent(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(GeventScopeManager())
         self.queue = gevent.queue.Queue()
         self.server = Server(tracer=self.tracer, queue=self.queue)
 

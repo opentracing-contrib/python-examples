@@ -17,7 +17,8 @@ class TestTornado(OpenTracingTestCase):
         # Start an isolated task and query for its result -and finish it-
         # in another task/thread
         span = self.tracer.start_span('initial')
-        self.submit_another_task(span)
+        with TracerStackContext():
+            self.submit_another_task(span)
 
         stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 3)
         self.loop.start()
@@ -38,14 +39,14 @@ class TestTornado(OpenTracingTestCase):
     @gen.coroutine
     def task(self, span):
         # Create a new Span for this task
-        with self.tracer.start_span('task') as task_span:
+        with self.tracer.start_active_span('task', True):
 
-            with span:
+            with self.tracer.scope_manager.activate(span, True):
                 # Simulate work strictly related to the initial Span
                 pass
 
             # Use the task span as parent of a new subtask
-            with self.tracer.start_span('subtask', child_of=task_span):
+            with self.tracer.start_active_span('subtask', True):
                 pass
 
     def submit_another_task(self, span):

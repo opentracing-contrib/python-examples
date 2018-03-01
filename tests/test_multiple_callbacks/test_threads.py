@@ -22,13 +22,13 @@ class TestThreads(OpenTracingTestCase):
 
     def test_main(self):
         try:
-            scope = self.tracer.start_active('parent', finish_on_close=False)
-            scope.span()._ref_count = RefCount(1)
-            self.submit_callbacks(scope.span())
+            scope = self.tracer.start_active_span('parent', False)
+            scope.span._ref_count = RefCount(1)
+            self.submit_callbacks(scope.span)
         finally:
             scope.close()
-            if scope.span()._ref_count.decr() == 0:
-                scope.span().finish()
+            if scope.span._ref_count.decr() == 0:
+                scope.span.finish()
 
         self.executor.shutdown(True)
 
@@ -45,7 +45,7 @@ class TestThreads(OpenTracingTestCase):
 
         try:
             scope = self.tracer.scope_manager.activate(parent_span, False)
-            with self.tracer.start_active('task'):
+            with self.tracer.start_active_span('task', True):
                 time.sleep(interval)
         finally:
             scope.close()

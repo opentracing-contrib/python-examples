@@ -6,6 +6,7 @@ import opentracing
 from opentracing.ext import tags
 
 from ..opentracing_mock import MockTracer
+from ..span_propagation import AsyncioScopeManager
 from ..testcase import OpenTracingTestCase
 from ..utils import get_logger, get_one_by_tag, stop_loop_when
 
@@ -30,8 +31,10 @@ class Server(object):
         logger.info('Processing message in server')
 
         ctx = self.tracer.extract(opentracing.Format.TEXT_MAP, message)
-        with self.tracer.start_span('receive', child_of=ctx) as span:
-            span.set_tag(tags.SPAN_KIND, tags.SPAN_KIND_RPC_SERVER)
+        with self.tracer.start_active_span('receive',
+                                           True,
+                                           child_of=ctx) as scope:
+            scope.span.set_tag(tags.SPAN_KIND, tags.SPAN_KIND_RPC_SERVER)
 
 
 class Client(object):
@@ -40,11 +43,11 @@ class Client(object):
         self.queue = queue
 
     async def send(self):
-        with self.tracer.start_span('send') as span:
-            span.set_tag(tags.SPAN_KIND, tags.SPAN_KIND_RPC_CLIENT)
+        with self.tracer.start_active_span('send', True) as scope:
+            scope.span.set_tag(tags.SPAN_KIND, tags.SPAN_KIND_RPC_CLIENT)
 
             message = {}
-            self.tracer.inject(span.context,
+            self.tracer.inject(scope.span.context,
                                opentracing.Format.TEXT_MAP,
                                message)
             await self.queue.put(message)
@@ -54,7 +57,7 @@ class Client(object):
 
 class TestAsyncio(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(AsyncioScopeManager())
         self.queue = asyncio.Queue()
         self.loop = asyncio.get_event_loop()
         self.server = Server(tracer=self.tracer, queue=self.queue)

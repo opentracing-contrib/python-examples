@@ -41,8 +41,10 @@ class TestAsyncio(OpenTracingTestCase):
     def submit_subtasks(self, parent_span):
         async def task(name):
             logger.info('Running %s' % name)
-            with self.tracer.start_span(name, child_of=parent_span):
-                pass
+            with self.tracer.start_active_span(name,
+                                               True,
+                                               child_of=parent_span):
+                asyncio.sleep(0.1)
 
         self.loop.create_task(task('task1'))
         self.loop.create_task(task('task2'))

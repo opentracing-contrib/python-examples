@@ -4,6 +4,7 @@ from threading import Thread
 from six.moves import queue
 
 import opentracing
+from basictracer import ThreadLocalScopeManager
 from opentracing.ext import tags
 
 from ..opentracing_mock import MockTracer
@@ -20,7 +21,7 @@ class Server(Thread):
         queue = kwargs.pop('queue')
         super(Server, self).__init__(*args, **kwargs)
 
-        self.deameon = True
+        self.daemon = True
         self.tracer = tracer
         self.queue = queue
 
@@ -32,8 +33,10 @@ class Server(Thread):
         logger.info('Processing message in server')
 
         ctx = self.tracer.extract(opentracing.Format.TEXT_MAP, message)
-        with self.tracer.start_span('receive', child_of=ctx) as span:
-            span.set_tag(tags.SPAN_KIND, tags.SPAN_KIND_RPC_SERVER)
+        with self.tracer.start_active_span('receive',
+                                           True,
+                                           child_of=ctx) as scope:
+            scope.span.set_tag(tags.SPAN_KIND, tags.SPAN_KIND_RPC_SERVER)
 
 
 class Client(object):
@@ -42,11 +45,11 @@ class Client(object):
         self.queue = queue
 
     def send(self):
-        with self.tracer.start_span('send') as span:
-            span.set_tag(tags.SPAN_KIND, tags.SPAN_KIND_RPC_CLIENT)
+        with self.tracer.start_active_span('send', True) as scope:
+            scope.span.set_tag(tags.SPAN_KIND, tags.SPAN_KIND_RPC_CLIENT)
 
             message = {}
-            self.tracer.inject(span.context,
+            self.tracer.inject(scope.span.context,
                                opentracing.Format.TEXT_MAP,
                                message)
             self.queue.put(message)
@@ -56,7 +59,7 @@ class Client(object):
 
 class TestThreads(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(ThreadLocalScopeManager())
         self.queue = queue.Queue()
         self.server = Server(tracer=self.tracer, queue=self.queue)
         self.server.start()
@@ -65,7 +68,7 @@ class TestThreads(OpenTracingTestCase):
         client = Client(self.tracer, self.queue)
         client.send()
 
-        await_until(lambda: len(self.tracer.finished_spans) >= 2, 15)
+        await_until(lambda: len(self.tracer.finished_spans) >= 2)
 
         spans = self.tracer.finished_spans
         self.assertIsNotNone(get_one_by_tag(spans,

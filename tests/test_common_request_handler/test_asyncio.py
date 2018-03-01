@@ -80,7 +80,7 @@ class TestAsyncio(OpenTracingTestCase):
         '''Active parent should not be picked up by child.'''
 
         async def do():
-            with self.tracer.start_active('parent'):
+            with self.tracer.start_active_span('parent', True):
                 response = await self.client.send_task('no_parent')
                 self.assertEquals('no_parent::response', response)
 
@@ -103,8 +103,8 @@ class TestAsyncio(OpenTracingTestCase):
         (we don't have better choice)'''
 
         async def do():
-            with self.tracer.start_active('parent') as scope:
-                client = Client(RequestHandler(self.tracer, scope.span().context),
+            with self.tracer.start_active_span('parent', True) as scope:
+                client = Client(RequestHandler(self.tracer, scope.span.context),
                                 self.loop)
                 response = await client.send_task('correct_parent')
 

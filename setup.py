@@ -19,12 +19,11 @@ setup(
     packages=['tests'],
     platforms='any',
     install_requires=[
-        'opentracing>=1.2.1,<1.3',
-        'basictracer>=2.2,<2.3',
+        'basictracer==3.0.0rc1',
         'six>=1.10.0,<2.0',
         'futures',
         'tornado',
-        'gevent',
+        'gevent==1.2',
     ],
     extras_require={
         'tests': [
