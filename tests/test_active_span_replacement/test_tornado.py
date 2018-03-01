@@ -3,13 +3,14 @@ from __future__ import print_function
 from tornado import gen, ioloop
 
 from ..opentracing_mock import MockTracer
+from ..span_propagation import TornadoScopeManager, TracerStackContext
 from ..testcase import OpenTracingTestCase
 from ..utils import stop_loop_when
 
 
 class TestTornado(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(TornadoScopeManager())
         self.loop = ioloop.IOLoop.current()
 
     def test_main(self):
@@ -23,9 +24,7 @@ class TestTornado(OpenTracingTestCase):
 
         spans = self.tracer.finished_spans
         self.assertEqual(len(spans), 3)
-        self.assertEqual(spans[0].operation_name, 'initial')
-        self.assertEqual(spans[1].operation_name, 'subtask')
-        self.assertEqual(spans[2].operation_name, 'task')
+        self.assertNamesEqual(spans, ['initial', 'subtask', 'task'])
 
         # task/subtask are part of the same trace,
         # and subtask is a child of task

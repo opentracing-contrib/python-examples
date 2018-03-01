@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+from basictracer import ThreadLocalScopeManager
 from concurrent.futures import ThreadPoolExecutor
 
 from ..opentracing_mock import MockTracer
@@ -8,7 +9,7 @@ from ..testcase import OpenTracingTestCase
 
 class TestThreads(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(ThreadLocalScopeManager())
         self.executor = ThreadPoolExecutor(max_workers=3)
 
     def test_main(self):
@@ -21,9 +22,7 @@ class TestThreads(OpenTracingTestCase):
 
         spans = self.tracer.finished_spans
         self.assertEqual(len(spans), 3)
-        self.assertEqual(spans[0].operation_name, 'initial')
-        self.assertEqual(spans[1].operation_name, 'subtask')
-        self.assertEqual(spans[2].operation_name, 'task')
+        self.assertNamesEqual(spans, ['initial', 'subtask', 'task'])
 
         # task/subtask are part of the same trace,
         # and subtask is a child of task
@@ -36,14 +35,14 @@ class TestThreads(OpenTracingTestCase):
 
     def task(self, span):
         # Create a new Span for this task
-        with self.tracer.start_span('task') as task_span:
+        with self.tracer.start_active('task') as task_span:
 
-            with span:
+            with self.tracer.scope_manager.activate(span, True):
                 # Simulate work strictly related to the initial Span
                 pass
 
             # Use the task span as parent of a new subtask
-            with self.tracer.start_span('subtask', child_of=task_span):
+            with self.tracer.start_active('subtask'):
                 pass
 
     def submit_another_task(self, span):

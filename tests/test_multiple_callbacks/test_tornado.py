@@ -5,6 +5,7 @@ import random
 from tornado import gen, ioloop
 
 from ..opentracing_mock import MockTracer
+from ..span_propagation import TornadoScopeManager, TracerStackContext
 from ..testcase import OpenTracingTestCase
 from ..utils import RefCount, get_logger, stop_loop_when
 
@@ -19,20 +20,25 @@ class TestTornado(OpenTracingTestCase):
         self.loop = ioloop.IOLoop.current()
 
     def test_main(self):
-        span = self.tracer.start_span('parent')
+        def init():
+            try:
+                scope = self.tracer.start_active('parent', finish_on_close=False)
+                scope.span()._ref_count = RefCount(1)
+                self.submit_callbacks(scope.span())
+            finally:
+                scope.close()
+                if scope.span()._ref_count.decr() == 0:
+                    scope.span().finish()
 
-        span._ref_count = RefCount(1)
-        self.submit_callbacks(span)
-        if span._ref_count.decr() == 0:
-            span.finish()
+        with TracerStackContext():
+            self.loop.add_callback(init)
 
         stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 4)
         self.loop.start()
 
         spans = self.tracer.finished_spans
         self.assertEquals(len(spans), 4)
-        self.assertEquals([x.operation_name for x in spans],
-                          ['task', 'task', 'task', 'parent'])
+        self.assertNamesEqual(spans, ['task', 'task', 'task', 'parent'])
 
         for i in range(3):
             self.assertSameTrace(spans[i], spans[-1])
@@ -42,8 +48,10 @@ class TestTornado(OpenTracingTestCase):
     def task(self, interval, parent_span):
         logger.info('Starting task')
 
+        # No need to reactivate the parent_span, as TracerStackContext
+        # keeps track of it.
         try:
-            with self.tracer.start_span('task', child_of=parent_span):
+            with self.tracer.start_active('task'):
                 yield gen.sleep(interval)
         finally:
             if parent_span._ref_count.decr() == 0:

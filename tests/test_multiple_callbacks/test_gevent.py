@@ -6,6 +6,7 @@ import gevent
 
 from ..opentracing_mock import MockTracer
 from ..testcase import OpenTracingTestCase
+from ..span_propagation import GeventScopeManager
 from ..utils import RefCount, get_logger
 
 
@@ -15,22 +16,23 @@ logger = get_logger(__name__)
 
 class TestGevent(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(GeventScopeManager())
 
     def test_main(self):
-        span = self.tracer.start_span('parent')
-
-        span._ref_count = RefCount(1)
-        self.submit_callbacks(span)
-        if span._ref_count.decr() == 0:
-            span.finish()
+        try:
+            scope = self.tracer.start_active('parent', finish_on_close=False)
+            scope.span()._ref_count = RefCount(1)
+            self.submit_callbacks(scope.span())
+        finally:
+            scope.close()
+            if scope.span()._ref_count.decr() == 0:
+                scope.span().finish()
 
         gevent.wait(timeout=5.0)
 
         spans = self.tracer.finished_spans
         self.assertEquals(len(spans), 4)
-        self.assertEquals([x.operation_name for x in spans],
-                          ['task', 'task', 'task', 'parent'])
+        self.assertNamesEqual(spans, ['task', 'task', 'task', 'parent'])
 
         for i in range(3):
             self.assertSameTrace(spans[i], spans[-1])
@@ -40,9 +42,11 @@ class TestGevent(OpenTracingTestCase):
         logger.info('Starting task')
 
         try:
-            with self.tracer.start_span('task', child_of=parent_span):
+            scope = self.tracer.scope_manager.activate(parent_span, False)
+            with self.tracer.start_active('task'):
                 gevent.sleep(interval)
         finally:
+            scope.close()
             if parent_span._ref_count.decr() == 0:
                 parent_span.finish()
 

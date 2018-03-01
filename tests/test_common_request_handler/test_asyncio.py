@@ -7,6 +7,7 @@ import asyncio
 from opentracing.ext import tags
 
 from ..opentracing_mock import MockTracer
+from ..span_propagation import AsyncioScopeManager
 from ..testcase import OpenTracingTestCase
 from ..utils import get_logger, get_one_by_operation_name, stop_loop_when
 from .request_handler import RequestHandler
@@ -50,7 +51,7 @@ class TestAsyncio(OpenTracingTestCase):
     '''
 
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(AsyncioScopeManager())
         self.loop = asyncio.get_event_loop()
         self.client = Client(RequestHandler(self.tracer), self.loop)
 
@@ -78,9 +79,12 @@ class TestAsyncio(OpenTracingTestCase):
     def test_parent_not_picked(self):
         '''Active parent should not be picked up by child.'''
 
-        with self.tracer.start_span('parent'):
-            response = self.client.send_sync('no_parent')
-            self.assertEquals('no_parent::response', response)
+        async def do():
+            with self.tracer.start_active('parent'):
+                response = await self.client.send_task('no_parent')
+                self.assertEquals('no_parent::response', response)
+
+        self.loop.run_until_complete(do())
 
         spans = self.tracer.finished_spans
         self.assertEquals(len(spans), 2)
@@ -98,15 +102,19 @@ class TestAsyncio(OpenTracingTestCase):
         '''Solution is bad because parent is per client
         (we don't have better choice)'''
 
-        with self.tracer.start_span('parent') as span:
-            client = Client(RequestHandler(self.tracer, span.context),
-                            self.loop)
-            response = client.send_sync('correct_parent')
+        async def do():
+            with self.tracer.start_active('parent') as scope:
+                client = Client(RequestHandler(self.tracer, scope.span().context),
+                                self.loop)
+                response = await client.send_task('correct_parent')
 
-            self.assertEquals('correct_parent::response', response)
+                self.assertEquals('correct_parent::response', response)
 
-        response = client.send_sync('wrong_parent')
-        self.assertEquals('wrong_parent::response', response)
+            # Send second request, now there is no active parent, but it will be set, ups
+            response = await client.send_task('wrong_parent')
+            self.assertEquals('wrong_parent::response', response)
+
+        self.loop.run_until_complete(do())
 
         spans = self.tracer.finished_spans
         self.assertEquals(len(spans), 3)

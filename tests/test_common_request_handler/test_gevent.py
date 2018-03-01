@@ -5,6 +5,7 @@ import gevent
 from opentracing.ext import tags
 
 from ..opentracing_mock import MockTracer
+from ..span_propagation import GeventScopeManager
 from ..testcase import OpenTracingTestCase
 from ..utils import get_logger, get_one_by_operation_name
 from .request_handler import RequestHandler
@@ -47,7 +48,7 @@ class TestGevent(OpenTracingTestCase):
     '''
 
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(GeventScopeManager())
         self.client = Client(RequestHandler(self.tracer))
 
     def test_two_callbacks(self):
@@ -73,7 +74,7 @@ class TestGevent(OpenTracingTestCase):
     def test_parent_not_picked(self):
         '''Active parent should not be picked up by child.'''
 
-        with self.tracer.start_span('parent'):
+        with self.tracer.start_active('parent'):
             response = self.client.send_sync('no_parent')
             self.assertEquals('no_parent::response', response)
 
@@ -93,8 +94,8 @@ class TestGevent(OpenTracingTestCase):
         '''Solution is bad because parent is per client
         (we don't have better choice)'''
 
-        with self.tracer.start_span('parent') as span:
-            client = Client(RequestHandler(self.tracer, span.context))
+        with self.tracer.start_active('parent') as scope:
+            client = Client(RequestHandler(self.tracer, scope.span().context))
             response = client.send_sync('correct_parent')
 
             self.assertEquals('correct_parent::response', response)

@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+from basictracer import ThreadLocalScopeManager
 from concurrent.futures import ThreadPoolExecutor
 from opentracing.ext import tags
 
@@ -30,7 +31,7 @@ class Client(object):
 
 class TestThreads(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer()
+        self.tracer = MockTracer(ThreadLocalScopeManager())
 
     def test_main(self):
         client = Client(self.tracer)
