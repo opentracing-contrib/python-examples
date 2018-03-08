@@ -34,29 +34,30 @@ class TestTornado(OpenTracingTestCase):
     # Since TracerStackContext propagates the active Span
     # from the first callback, we don't need to re-activate
     # it later on anymore.
+    @gen.coroutine
     def submit(self):
         span = self.tracer.scope_manager.active.span
 
         @gen.coroutine
         def task1():
-            with self.tracer.scope_manager.activate(span, False):
-                span.set_tag('key1', '1')
+            self.assertEqual(span, self.tracer.scope_manager.active.span)
+            span.set_tag('key1', '1')
+
+            @gen.coroutine
+            def task2():
+                self.assertEqual(span,
+                                 self.tracer.scope_manager.active.span)
+                span.set_tag('key2', '2')
 
                 @gen.coroutine
-                def task2():
+                def task3():
                     self.assertEqual(span,
                                      self.tracer.scope_manager.active.span)
-                    span.set_tag('key2', '2')
+                    span.set_tag('key3', '3')
+                    span.finish()
 
-                    @gen.coroutine
-                    def task3():
-                        self.assertEqual(span,
-                                         self.tracer.scope_manager.active.span)
-                        span.set_tag('key3', '3')
-                        span.finish()
+                yield task3()
 
-                    yield task3()
+            yield task2()
 
-                yield task2()
-
-        self.loop.add_callback(task1)
+        yield task1()
