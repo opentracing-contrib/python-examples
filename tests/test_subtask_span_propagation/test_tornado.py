@@ -4,7 +4,7 @@ import functools
 
 from tornado import gen, ioloop
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..span_propagation import TracerStackContext, TornadoScopeManager
 from ..testcase import OpenTracingTestCase
 
@@ -20,7 +20,7 @@ class TestTornado(OpenTracingTestCase):
             res = self.loop.run_sync(parent_task)
         self.assertEqual(res, 'message::response')
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEqual(len(spans), 2)
         self.assertNamesEqual(spans, ['child', 'parent'])
         self.assertIsChildOf(spans[0], spans[1])

@@ -4,7 +4,7 @@ import random
 
 from tornado import gen, ioloop
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..span_propagation import TornadoScopeManager, TracerStackContext
 from ..testcase import OpenTracingTestCase
 from ..utils import RefCount, get_logger, stop_loop_when
@@ -29,10 +29,10 @@ class TestTornado(OpenTracingTestCase):
         with TracerStackContext():
             self.loop.add_callback(main_task)
 
-        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) == 4)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans()) == 4)
         self.loop.start()
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEquals(len(spans), 4)
         self.assertNamesEqual(spans, ['task', 'task', 'task', 'parent'])
 

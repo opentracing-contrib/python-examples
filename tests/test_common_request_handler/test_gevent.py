@@ -4,7 +4,7 @@ import gevent
 
 from opentracing.ext import tags
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..span_propagation import GeventScopeManager
 from ..testcase import OpenTracingTestCase
 from ..utils import get_logger, get_one_by_operation_name
@@ -60,7 +60,7 @@ class TestGevent(OpenTracingTestCase):
         self.assertEquals('message1::response', response_greenlet1.get())
         self.assertEquals('message2::response', response_greenlet2.get())
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEquals(len(spans), 2)
 
         for span in spans:
@@ -78,7 +78,7 @@ class TestGevent(OpenTracingTestCase):
             response = self.client.send_sync('no_parent')
             self.assertEquals('no_parent::response', response)
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEquals(len(spans), 2)
 
         child_span = get_one_by_operation_name(spans, 'send')
@@ -103,7 +103,7 @@ class TestGevent(OpenTracingTestCase):
         response = client.send_sync('wrong_parent')
         self.assertEquals('wrong_parent::response', response)
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEquals(len(spans), 3)
 
         spans = sorted(spans, key=lambda x: x.start_time)

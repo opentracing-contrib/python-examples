@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import gevent
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..testcase import OpenTracingTestCase
 from ..span_propagation import GeventScopeManager
 from ..utils import get_logger, stop_loop_when
@@ -25,7 +25,7 @@ class TestGevent(OpenTracingTestCase):
         # Late-finish the parent Span now.
         parent_span.finish()
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEqual(len(spans), 3)
         self.assertNamesEqual(spans, ['task1', 'task2', 'parent'])
 

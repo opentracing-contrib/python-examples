@@ -3,7 +3,7 @@ from __future__ import print_function
 
 from tornado import gen, ioloop
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..testcase import OpenTracingTestCase
 from ..span_propagation import TornadoScopeManager, TracerStackContext
 from ..utils import stop_loop_when
@@ -21,10 +21,10 @@ class TestTornado(OpenTracingTestCase):
             with self.tracer.start_active_span('one', False):
                 self.submit()
 
-        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) == 1)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans()) == 1)
         self.loop.start()
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEqual(len(spans), 1)
         self.assertEqual(spans[0].operation_name, 'one')
 

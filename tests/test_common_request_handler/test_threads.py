@@ -1,11 +1,10 @@
 from __future__ import print_function
 
-from basictracer import ThreadLocalScopeManager
 from concurrent.futures import ThreadPoolExecutor
 
 from opentracing.ext import tags
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..testcase import OpenTracingTestCase
 from ..utils import get_logger, get_one_by_operation_name
 from .request_handler import RequestHandler
@@ -50,7 +49,7 @@ class TestThreads(OpenTracingTestCase):
     '''
 
     def setUp(self):
-        self.tracer = MockTracer(ThreadLocalScopeManager())
+        self.tracer = MockTracer()
         self.executor = ThreadPoolExecutor(max_workers=3)
         self.client = Client(RequestHandler(self.tracer), self.executor)
 
@@ -61,7 +60,7 @@ class TestThreads(OpenTracingTestCase):
         self.assertEquals('message1::response', response_future1.result(5.0))
         self.assertEquals('message2::response', response_future2.result(5.0))
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEquals(len(spans), 2)
 
         for span in spans:
@@ -79,7 +78,7 @@ class TestThreads(OpenTracingTestCase):
             response = self.client.send_sync('no_parent')
             self.assertEquals('no_parent::response', response)
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEquals(len(spans), 2)
 
         child_span = get_one_by_operation_name(spans, 'send')
@@ -104,7 +103,7 @@ class TestThreads(OpenTracingTestCase):
         response = client.send_sync('wrong_parent')
         self.assertEquals('wrong_parent::response', response)
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEquals(len(spans), 3)
 
         spans = sorted(spans, key=lambda x: x.start_time)

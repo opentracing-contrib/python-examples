@@ -4,7 +4,7 @@ import random
 
 import gevent
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..testcase import OpenTracingTestCase
 from ..span_propagation import GeventScopeManager
 from ..utils import RefCount, get_logger
@@ -27,7 +27,7 @@ class TestGevent(OpenTracingTestCase):
         gevent.spawn(main_task)
         gevent.wait(timeout=5.0)
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEquals(len(spans), 4)
         self.assertNamesEqual(spans, ['task', 'task', 'task', 'parent'])
 

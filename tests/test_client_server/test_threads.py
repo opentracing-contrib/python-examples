@@ -4,10 +4,9 @@ from threading import Thread
 from six.moves import queue
 
 import opentracing
-from basictracer import ThreadLocalScopeManager
 from opentracing.ext import tags
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..testcase import OpenTracingTestCase
 from ..utils import await_until, get_logger, get_one_by_tag
 
@@ -59,7 +58,7 @@ class Client(object):
 
 class TestThreads(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer(ThreadLocalScopeManager())
+        self.tracer = MockTracer()
         self.queue = queue.Queue()
         self.server = Server(tracer=self.tracer, queue=self.queue)
         self.server.start()
@@ -68,9 +67,9 @@ class TestThreads(OpenTracingTestCase):
         client = Client(self.tracer, self.queue)
         client.send()
 
-        await_until(lambda: len(self.tracer.finished_spans) >= 2)
+        await_until(lambda: len(self.tracer.finished_spans()) >= 2)
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertIsNotNone(get_one_by_tag(spans,
                                             tags.SPAN_KIND,
                                             tags.SPAN_KIND_RPC_SERVER))

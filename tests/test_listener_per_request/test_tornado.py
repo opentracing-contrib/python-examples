@@ -5,7 +5,7 @@ import functools
 from opentracing.ext import tags
 from tornado import gen, ioloop
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..span_propagation import TornadoScopeManager
 from ..testcase import OpenTracingTestCase
 from ..utils import get_one_by_tag
@@ -43,7 +43,7 @@ class TestThreads(OpenTracingTestCase):
         res = client.send_sync('message')
         self.assertEquals(res, 'message::response')
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEqual(len(spans), 1)
 
         span = get_one_by_tag(spans, tags.SPAN_KIND, tags.SPAN_KIND_RPC_CLIENT)

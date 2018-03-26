@@ -6,7 +6,7 @@ import gevent.queue
 import opentracing
 from opentracing.ext import tags
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..span_propagation import GeventScopeManager
 from ..testcase import OpenTracingTestCase
 from ..utils import get_logger, get_one_by_tag
@@ -69,7 +69,7 @@ class TestGevent(OpenTracingTestCase):
 
         gevent.wait(timeout=5.0)
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertIsNotNone(get_one_by_tag(spans,
                                             tags.SPAN_KIND,
                                             tags.SPAN_KIND_RPC_SERVER))

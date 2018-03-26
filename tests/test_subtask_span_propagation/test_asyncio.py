@@ -4,7 +4,7 @@ import functools
 
 import asyncio
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..span_propagation import AsyncioScopeManager
 from ..testcase import OpenTracingTestCase
 
@@ -18,7 +18,7 @@ class TestAsyncio(OpenTracingTestCase):
         res = self.loop.run_until_complete(self.parent_task('message'))
         self.assertEqual(res, 'message::response')
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEqual(len(spans), 2)
         self.assertNamesEqual(spans, ['child', 'parent'])
         self.assertIsChildOf(spans[0], spans[1])

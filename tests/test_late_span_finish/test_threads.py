@@ -1,16 +1,15 @@
 from __future__ import print_function
 
 import time
-from basictracer import ThreadLocalScopeManager
 from concurrent.futures import ThreadPoolExecutor
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..testcase import OpenTracingTestCase
 
 
 class TestThreads(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer(ThreadLocalScopeManager())
+        self.tracer = MockTracer()
         self.executor = ThreadPoolExecutor(max_workers=3)
 
     def test_main(self):
@@ -24,7 +23,7 @@ class TestThreads(OpenTracingTestCase):
         # Late-finish the parent Span now.
         parent_span.finish()
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEqual(len(spans), 3)
         self.assertNamesEqual(spans, ['task1', 'task2', 'parent'])
 

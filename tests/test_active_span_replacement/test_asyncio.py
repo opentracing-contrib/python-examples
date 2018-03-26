@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import asyncio
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..testcase import OpenTracingTestCase
 from ..span_propagation import AsyncioScopeManager
 from ..utils import stop_loop_when
@@ -19,10 +19,10 @@ class TestAsyncio(OpenTracingTestCase):
         span = self.tracer.start_span('initial')
         self.submit_another_task(span)
 
-        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 3)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans()) >= 3)
         self.loop.run_forever()
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEqual(len(spans), 3)
         self.assertNamesEqual(spans, ['initial', 'subtask', 'task'])
 

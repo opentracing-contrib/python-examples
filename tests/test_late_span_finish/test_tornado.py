@@ -2,7 +2,7 @@ from __future__ import print_function
 
 from tornado import gen, ioloop
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..span_propagation import TornadoScopeManager, TracerStackContext
 from ..testcase import OpenTracingTestCase
 from ..utils import get_logger, stop_loop_when
@@ -22,13 +22,13 @@ class TestTornado(OpenTracingTestCase):
             parent_span = self.tracer.start_span('parent')
             self.submit_subtasks(parent_span)
 
-        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans()) >= 2)
         self.loop.start()
 
         # Late-finish the parent Span now.
         parent_span.finish()
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEqual(len(spans), 3)
         self.assertNamesEqual(spans, ['task1', 'task2', 'parent'])
 

@@ -6,7 +6,7 @@ import asyncio
 
 from opentracing.ext import tags
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..span_propagation import AsyncioScopeManager
 from ..testcase import OpenTracingTestCase
 from ..utils import get_logger, get_one_by_operation_name, stop_loop_when
@@ -59,13 +59,13 @@ class TestAsyncio(OpenTracingTestCase):
         res_future1 = self.loop.create_task(self.client.send('message1'))
         res_future2 = self.loop.create_task(self.client.send('message2'))
 
-        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans()) >= 2)
         self.loop.run_forever()
 
         self.assertEquals('message1::response', res_future1.result())
         self.assertEquals('message2::response', res_future2.result())
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEquals(len(spans), 2)
 
         for span in spans:
@@ -86,7 +86,7 @@ class TestAsyncio(OpenTracingTestCase):
 
         self.loop.run_until_complete(do())
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEquals(len(spans), 2)
 
         child_span = get_one_by_operation_name(spans, 'send')
@@ -116,7 +116,7 @@ class TestAsyncio(OpenTracingTestCase):
 
         self.loop.run_until_complete(do())
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEquals(len(spans), 3)
 
         spans = sorted(spans, key=lambda x: x.start_time)

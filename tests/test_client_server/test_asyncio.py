@@ -5,7 +5,7 @@ import asyncio
 import opentracing
 from opentracing.ext import tags
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..span_propagation import AsyncioScopeManager
 from ..testcase import OpenTracingTestCase
 from ..utils import get_logger, get_one_by_tag, stop_loop_when
@@ -67,10 +67,10 @@ class TestAsyncio(OpenTracingTestCase):
         self.loop.create_task(self.server.run())
         self.loop.create_task(client.send())
 
-        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans()) >= 2)
         self.loop.run_forever()
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertIsNotNone(get_one_by_tag(spans,
                                             tags.SPAN_KIND,
                                             tags.SPAN_KIND_RPC_SERVER))

@@ -1,10 +1,9 @@
 from __future__ import print_function
 
-from basictracer import ThreadLocalScopeManager
 from concurrent.futures import ThreadPoolExecutor
 from opentracing.ext import tags
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..testcase import OpenTracingTestCase
 from ..utils import get_one_by_tag
 
@@ -31,14 +30,14 @@ class Client(object):
 
 class TestThreads(OpenTracingTestCase):
     def setUp(self):
-        self.tracer = MockTracer(ThreadLocalScopeManager())
+        self.tracer = MockTracer()
 
     def test_main(self):
         client = Client(self.tracer)
         res = client.send_sync('message')
         self.assertEquals(res, 'message::response')
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEqual(len(spans), 1)
 
         span = get_one_by_tag(spans, tags.SPAN_KIND, tags.SPAN_KIND_RPC_CLIENT)

@@ -6,7 +6,7 @@ from tornado import gen, ioloop
 
 from opentracing.ext import tags
 
-from ..opentracing_mock import MockTracer
+from mocktracer import MockTracer
 from ..span_propagation import TornadoScopeManager, TracerStackContext
 from ..testcase import OpenTracingTestCase
 from ..utils import get_logger, get_one_by_operation_name, stop_loop_when
@@ -63,13 +63,13 @@ class TestTornado(OpenTracingTestCase):
         res_future1 = self.client.send('message1')
         res_future2 = self.client.send('message2')
 
-        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans) >= 2)
+        stop_loop_when(self.loop, lambda: len(self.tracer.finished_spans()) >= 2)
         self.loop.start()
 
         self.assertEquals('message1::response', res_future1.result())
         self.assertEquals('message2::response', res_future2.result())
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEquals(len(spans), 2)
 
         for span in spans:
@@ -88,7 +88,7 @@ class TestTornado(OpenTracingTestCase):
                 response = self.client.send_sync('no_parent')
                 self.assertEquals('no_parent::response', response)
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEquals(len(spans), 2)
 
         child_span = get_one_by_operation_name(spans, 'send')
@@ -115,7 +115,7 @@ class TestTornado(OpenTracingTestCase):
         response = client.send_sync('wrong_parent')
         self.assertEquals('wrong_parent::response', response)
 
-        spans = self.tracer.finished_spans
+        spans = self.tracer.finished_spans()
         self.assertEquals(len(spans), 3)
 
         spans = sorted(spans, key=lambda x: x.start_time)
